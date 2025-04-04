@@ -1,0 +1,54 @@
+{
+  "imageName": "43160.jpg",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Arrow-1",
+          "name": "Arrow",
+          "coordinates": [
+            [
+              1411,
+              1457
+            ],
+            [
+              1390,
+              2093
+            ],
+            [
+              2037,
+              2124
+            ],
+            [
+              2078,
+              1447
+            ]
+          ]
+        },
+        {
+          "instanceId": "Circle-1",
+          "name": "Circle",
+          "coordinates": [
+            [
+              2551,
+              2278
+            ],
+            [
+              2705,
+              2658
+            ],
+            [
+              3167,
+              2535
+            ],
+            [
+              3218,
+              2258
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

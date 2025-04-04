@@ -1,0 +1,32 @@
+{
+  "imageName": "43027.jpg",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Rectangle-1",
+          "name": "Rectangle",
+          "coordinates": [
+            [
+              1297,
+              646
+            ],
+            [
+              1505,
+              1284
+            ],
+            [
+              2160,
+              1157
+            ],
+            [
+              1968,
+              479
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}
