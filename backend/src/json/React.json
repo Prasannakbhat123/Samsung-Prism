@@ -1,0 +1,54 @@
+{
+  "imageName": "React.png",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Star-1",
+          "name": "Star",
+          "coordinates": [
+            [
+              579,
+              269
+            ],
+            [
+              597,
+              530
+            ],
+            [
+              1074,
+              521
+            ],
+            [
+              1065,
+              281
+            ]
+          ]
+        },
+        {
+          "instanceId": "test-1",
+          "name": "test",
+          "coordinates": [
+            [
+              82,
+              47
+            ],
+            [
+              241,
+              86
+            ],
+            [
+              226,
+              248
+            ],
+            [
+              73,
+              233
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

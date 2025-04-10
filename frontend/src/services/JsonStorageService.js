@@ -6,7 +6,12 @@ class JsonStorageService {
   constructor() {
     this.jsonStorage = {};
     this.jsonFolderPath = 'src/json/';
-    this.apiEndpoint = 'http://localhost:3000/api/save-json';
+    
+    // Use the correct port for the API endpoint - dynamically determined for development
+    const apiPort = process.env.NODE_ENV === 'production' ? window.location.port : '3000';
+    this.apiEndpoint = `http://${window.location.hostname}:${apiPort}/api/save-json`;
+    
+    console.log(`🔌 API Endpoint configured as: ${this.apiEndpoint}`);
     
     // Attempt to load from localStorage for persistence between sessions
     try {
@@ -60,8 +65,11 @@ class JsonStorageService {
     // Save to localStorage for persistence
     this._saveToLocalStorage();
     
-    // Actually write the file using the appropriate method
-    this._writeJsonToFile(fullPath, formattedData, jsonFileName);
+    // Now actually write the file with a delay to ensure proper state updates
+    setTimeout(() => {
+      this._writeJsonToFile(fullPath, formattedData, jsonFileName);
+      console.log(`Scheduled save for ${jsonFileName} with ${polygons.length} polygons`);
+    }, 100);
     
     return {
       ...formattedData,
@@ -80,7 +88,14 @@ class JsonStorageService {
     
     // Remove file extension if present
     const baseFileName = fileName.split('.')[0];
-    return this.jsonStorage[baseFileName]?.data || null;
+    const savedData = this.jsonStorage[baseFileName]?.data;
+    
+    if (!savedData) {
+      console.log(`No saved data found for ${fileName} (${baseFileName})`);
+      console.log("Available data keys:", Object.keys(this.jsonStorage));
+    }
+    
+    return savedData;
   }
   
   /**
@@ -168,9 +183,12 @@ class JsonStorageService {
   _writeJsonToFile(filePath, content, fileName) {
     const jsonString = JSON.stringify(content, null, 2);
     
+    console.log(`Attempting to save JSON file: ${fileName}`);
+    console.log(`Using API endpoint: ${this.apiEndpoint}`);
+    
     // First try to use API endpoint if in browser
     if (!this.isNode) {
-      // Send to backend API
+      // Send to backend API with improved error handling
       fetch(this.apiEndpoint, {
         method: 'POST',
         headers: {
@@ -182,22 +200,20 @@ class JsonStorageService {
         })
       })
       .then(response => {
-        if (response.ok) {
-          console.log(`✅ Successfully saved ${fileName} to JSON folder via API`);
-          
-          // Show success notification
-          this._showNotification(`JSON saved: ${fileName}`, 'success');
-          return response.json();
-        } else {
-          console.error(`Failed to save file ${fileName}`);
-          
-          // Fallback to localStorage only
-          this._showNotification(`Could not save to server. Data saved in browser only.`, 'warning');
-          return response.json().then(data => Promise.reject(data));
+        if (!response.ok) {
+          throw new Error(`Server responded with status: ${response.status}`);
         }
+        return response.json();
+      })
+      .then(data => {
+        console.log(`✅ Successfully saved ${fileName} to JSON folder via API`);
+        this._showNotification(`JSON saved: ${fileName}`, 'success');
       })
       .catch(err => {
-        console.error('Error saving file:', err);
+        console.error('❌ Error saving file:', err);
+        
+        // Show detailed error message
+        this._showNotification(`Failed to save on server: ${err.message}. Using local storage only.`, 'warning');
         
         // Fallback to download method if API fails
         this._offerDownload(fileName, jsonString);

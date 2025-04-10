@@ -1,0 +1,32 @@
+{
+  "imageName": "Gemini_Generated_Image_phg9tiphg9tiphg9.jpg",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Rectangle-1",
+          "name": "Rectangle",
+          "coordinates": [
+            [
+              229,
+              717
+            ],
+            [
+              200,
+              1009
+            ],
+            [
+              1430,
+              905
+            ],
+            [
+              1455,
+              592
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

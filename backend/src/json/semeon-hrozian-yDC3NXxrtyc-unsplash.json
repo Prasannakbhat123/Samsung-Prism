@@ -1,0 +1,32 @@
+{
+  "imageName": "semeon-hrozian-yDC3NXxrtyc-unsplash.jpg",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Rectangle-1",
+          "name": "Rectangle",
+          "coordinates": [
+            [
+              1525,
+              2640
+            ],
+            [
+              1625,
+              3800
+            ],
+            [
+              3173,
+              3701
+            ],
+            [
+              3107,
+              2386
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

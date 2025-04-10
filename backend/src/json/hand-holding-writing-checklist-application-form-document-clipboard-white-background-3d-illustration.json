@@ -1,0 +1,32 @@
+{
+  "imageName": "hand-holding-writing-checklist-application-form-document-clipboard-white-background-3d-illustration.jpg",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Triangle-1",
+          "name": "Triangle",
+          "coordinates": [
+            [
+              694,
+              477
+            ],
+            [
+              680,
+              618
+            ],
+            [
+              864,
+              614
+            ],
+            [
+              868,
+              466
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

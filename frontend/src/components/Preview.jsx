@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 
-const Preview = ({ selectedFile, currentTool, onProcessPolygons, onUpdatePolygons, selectedPolygon, setSelectedPolygon, onPolygonSelection, selectedPolygons, onRedrawCanvas, onExportPolygons }) => {
+const Preview = ({ selectedFile, currentTool, onProcessPolygons, onUpdatePolygons, selectedPolygon, setSelectedPolygon, onPolygonSelection, selectedPolygons, onRedrawCanvas, onExportPolygons, onForceSave }) => {
   const [polygons, setPolygons] = useState({});
   const [currentPolygon, setCurrentPolygon] = useState([]);
   const [selectedPointIndex, setSelectedPointIndex] = useState(null);
@@ -763,15 +763,16 @@ const Preview = ({ selectedFile, currentTool, onProcessPolygons, onUpdatePolygon
     setPolygons(updatedPolygons);
     
     // Notify parent component about the polygon update - this is critical
-    // Pass a new object to ensure React detects the change
     onUpdatePolygons({...updatedPolygons});
     
     // Set this polygon as selected so it gets highlighted and included in selectedPolygons
     setSelectedPolygon({...newPolygon});
     
-    // Force an update to selectedPolygons in the parent component
-    const currentFilePolygons = updatedPolygons[selectedFile] || [];
-    const allFilePolygons = currentFilePolygons.map(p => ({...p, fileUrl: selectedFile}));
+    // Use onForceSave instead of onExportPolygons to avoid showing the popup
+    // This will save the JSON in the background without showing the UI
+    if (typeof onForceSave === 'function') {
+      setTimeout(() => onForceSave(), 100);
+    }
     
     // FIX: Add redraw calls with delays for UI updates to take effect
     setTimeout(() => {
@@ -854,7 +855,8 @@ const Preview = ({ selectedFile, currentTool, onProcessPolygons, onUpdatePolygon
               Join
             </button>
             <button
-              onClick={onExportPolygons}
+              // Explicitly use showUI=true when clicking the View JSON button
+              onClick={() => onExportPolygons(true)}
               className="bg-[#2E3192] rounded-full text-white px-8 py-2 hover:bg-[#1a1c4a] transition"
             >
               View JSON

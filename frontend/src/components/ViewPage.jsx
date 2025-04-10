@@ -302,29 +302,42 @@ useEffect(() => {
   return () => clearTimeout(saveTimeout);
 }, [polygons, selectedFile, fileNames]);
 
-  const viewJsonData = () => {
-    if (!selectedFile?.url) {
-      alert("Please select a file first");
-      return;
-    }
+// Enhance this function to allow silent operation (no UI) for auto-saving
+const viewJsonData = (showUI = true) => {
+  if (!selectedFile?.url) {
+    if (showUI) alert("Please select a file first");
+    return;
+  }
+  
+  const fileName = fileNames[selectedFile.url] || 'unnamed-file';
+  const imagePolygons = polygons[selectedFile.url] || [];
+  
+  if (imagePolygons.length === 0) {
+    if (showUI) alert("No polygons to view for this image.");
+    return;
+  }
+  
+  const baseFileName = fileName.split('.')[0];
+  
+  // Check if we have data in the local storage first
+  let savedData = JsonStorageService.getPolygonData(fileName);
+  
+  // If no data found in storage, generate it on the fly from current polygons
+  if (!savedData) {
+    console.log("No saved data found, generating from current polygons");
     
-    const fileName = fileNames[selectedFile.url] || 'unnamed-file';
-    const imagePolygons = polygons[selectedFile.url] || [];
+    // Format the data directly from current polygons
+    savedData = JsonStorageService.formatPolygonData(fileName, imagePolygons);
     
-    if (imagePolygons.length === 0) {
-      alert("No polygons to view for this image.");
-      return;
-    }
-    
-    // Get the JSON data that was already saved automatically
-    const baseFileName = fileName.split('.')[0];
-    const savedData = JsonStorageService.getPolygonData(fileName);
-    
-    if (!savedData) {
-      alert("No saved data found for this image.");
-      return;
-    }
-    
+    // Save it to ensure it's available next time
+    JsonStorageService.savePolygonData(fileName, selectedFile.url, imagePolygons);
+  } else {
+    // Force update the saved data with current polygons to ensure latest changes are saved
+    JsonStorageService.savePolygonData(fileName, selectedFile.url, imagePolygons);
+  }
+  
+  // Only show modal if showUI is true
+  if (showUI) {
     // Show JSON data in modal
     setJsonDataPreview({
       ...savedData,
@@ -332,7 +345,16 @@ useEffect(() => {
       path: `${JsonStorageService.jsonFolderPath}${baseFileName}.json`
     });
     setShowJsonModal(true);
-  };
+  }
+  
+  return savedData;
+};
+
+// Add a new function specifically for auto-saving
+const forceSaveCurrentJson = () => {
+  // Call viewJsonData with showUI set to false for silent operation
+  viewJsonData(false);
+};
 
 const handleEditPolygon = (updatedPolygon) => {
   if (!selectedFile?.url || !updatedPolygon) return;
@@ -484,7 +506,10 @@ const handleEditPolygon = (updatedPolygon) => {
           setSelectedPolygon={setSelectedPolygon}
           onPolygonSelection={handleProcessPolygons}
           selectedPolygons={selectedPolygons} 
-          onExportPolygons={viewJsonData}
+          // Pass explicit function to control UI visibility
+          onExportPolygons={(showUI=true) => viewJsonData(showUI)}
+          // Silent save function for when we don't want a popup
+          onForceSave={() => viewJsonData(false)}
         />
 <PolygonList 
   polygons={allPolygons} 

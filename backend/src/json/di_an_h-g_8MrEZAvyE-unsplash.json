@@ -1,0 +1,32 @@
+{
+  "imageName": "di_an_h-g_8MrEZAvyE-unsplash.jpg",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Triangle-1",
+          "name": "Triangle",
+          "coordinates": [
+            [
+              2633,
+              951
+            ],
+            [
+              2658,
+              1658
+            ],
+            [
+              3506,
+              1798
+            ],
+            [
+              3720,
+              984
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}
