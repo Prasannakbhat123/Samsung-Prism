@@ -152,7 +152,7 @@ const PolygonList = ({ polygons, onPolygonClick, fileNames, selectedFile, select
   };
 
   return (
-    <div className="w-1/4 max-h-[90vh] bg-gray-100 p-4 h-full overflow-y-auto shadow-lg">
+    <div className="w-1/4 bg-gray-100 p-4 h-[vh] overflow-y-auto shadow-lg">
       <h2 className="text-xl font-bold mb-4 text-center text-black">Polygons</h2>
       
       {currentFilePolygons.length > 0 ? (
