@@ -16,6 +16,11 @@ const setRoutes = (app) => {
     jsonController.getAllJson(req, res);
   });
 
+  // GET route to fetch a specific JSON file by name
+  router.get('/file/:fileName', (req, res) => {
+    jsonController.getJsonByName(req, res);
+  });
+
   // Mount the router on the '/api' path
   app.use('/api', router);
   

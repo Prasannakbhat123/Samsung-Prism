@@ -9,9 +9,11 @@ class JsonStorageService {
     
     // Use the correct port for the API endpoint - dynamically determined for development
     const apiPort = process.env.NODE_ENV === 'production' ? window.location.port : '3000';
-    this.apiEndpoint = `http://${window.location.hostname}:${apiPort}/api/save-json`;
+    this.apiBaseUrl = `http://${window.location.hostname}:${apiPort}/api`;
+    this.apiEndpoint = `${this.apiBaseUrl}/save-json`;
+    this.apiGetEndpoint = `${this.apiBaseUrl}/file`;
     
-    console.log(`🔌 API Endpoint configured as: ${this.apiEndpoint}`);
+    console.log(`🔌 API Endpoints configured as: ${this.apiEndpoint} (save) and ${this.apiGetEndpoint} (fetch)`);
     
     // Attempt to load from localStorage for persistence between sessions
     try {
@@ -96,6 +98,71 @@ class JsonStorageService {
     }
     
     return savedData;
+  }
+  
+  /**
+   * Fetch JSON data for a specific image file from the server
+   * @param {string} fileName - Name of the image file
+   * @returns {Promise<Object>} - Promise resolving to the polygon data or null if not found
+   */
+  async fetchPolygonData(fileName) {
+    if (!fileName) return null;
+    
+    // Remove file extension and replace with .json
+    const baseFileName = fileName.split('.')[0];
+    const jsonFileName = `${baseFileName}.json`;
+    
+    try {
+      console.log(`Fetching polygon data for ${jsonFileName} from server`);
+      
+      const response = await fetch(`${this.apiGetEndpoint}/${jsonFileName}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log(`No saved data found for ${jsonFileName}`);
+          return null;
+        }
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log(`Successfully fetched polygon data for ${jsonFileName}`);
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error fetching polygon data for ${jsonFileName}:`, error);
+      return null;
+    }
+  }
+  
+  /**
+   * Convert JSON polygon data to application-ready polygon objects
+   * @param {Object} jsonData - The JSON data from the server
+   * @param {string} fileUrl - The URL of the image file
+   * @returns {Array} - Array of polygon objects ready for the application
+   */
+  convertJsonToPolygons(jsonData, fileUrl) {
+    if (!jsonData || !jsonData.classes) return [];
+    
+    try {
+      // Convert the JSON structure back to the format expected by the app
+      const polygons = jsonData.classes.flatMap(classInfo => 
+        classInfo.instances.map(instance => ({
+          name: instance.name,
+          group: classInfo.className,
+          points: instance.coordinates.map(([x, y]) => ({ x, y })),
+          originalPoints: instance.coordinates.map(([x, y]) => ({ x, y })),
+          fileUrl: fileUrl,
+          id: instance.instanceId || `${instance.name}-${Date.now()}`
+        }))
+      );
+      
+      console.log(`Converted ${polygons.length} polygons from JSON data for ${fileUrl}`);
+      return polygons;
+    } catch (error) {
+      console.error('Error converting JSON data to polygons:', error);
+      return [];
+    }
   }
   
   /**

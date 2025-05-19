@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import HomeSection from "./components/HomeSection";
 import PictureUploader from "./components/PictureUploader";
@@ -11,16 +11,44 @@ const App = () => {
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [viewMode, setViewMode] = useState(false);
 
+  // Add persistence for view mode and uploaded files
+  useEffect(() => {
+    // Check if there are saved files in localStorage
+    const savedFiles = localStorage.getItem("uploadedFiles");
+    const savedViewMode = localStorage.getItem("viewMode");
+
+    if (savedFiles) {
+      try {
+        const parsedFiles = JSON.parse(savedFiles);
+        setUploadedFiles(parsedFiles);
+        console.log("Restored uploaded files from localStorage");
+      } catch (error) {
+        console.error("Failed to parse saved files:", error);
+      }
+    }
+
+    if (savedViewMode === "true") {
+      setViewMode(true);
+      console.log("Restored view mode from localStorage");
+    }
+  }, []);
+
   const handleSetViewMode = (value) => {
     // Ensure we're actually changing the view mode
     console.log("Setting view mode to:", value);
     setViewMode(value);
+
+    // Save view mode to localStorage
+    localStorage.setItem("viewMode", value.toString());
   };
 
   const handleSetUploadedFiles = (files) => {
     // Ensure we're actually setting the files
     console.log("Setting uploaded files:", files);
     setUploadedFiles(files);
+
+    // Save files to localStorage
+    localStorage.setItem("uploadedFiles", JSON.stringify(files));
   };
 
   return (
@@ -54,9 +82,9 @@ const App = () => {
             <Footer />
           </>
         ) : (
-          <ViewPage 
-            uploadedFiles={uploadedFiles} 
-            setViewMode={handleSetViewMode} 
+          <ViewPage
+            uploadedFiles={uploadedFiles}
+            setViewMode={handleSetViewMode}
           />
         )}
       </div>

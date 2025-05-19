@@ -17,8 +17,8 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
   const [jsonDataPreview, setJsonDataPreview] = useState(null);
   const [showJsonModal, setShowJsonModal] = useState(false);
 
-  // Enhanced handleFileSelect to properly handle fileUrl consistency and reset selectedPolygons
-  const handleFileSelect = (fileUrl, filePath) => {
+  // Enhanced handleFileSelect to load saved polygon data from JSON files
+  const handleFileSelect = async (fileUrl, filePath) => {
     // Save current file's polygons before changing
     if (selectedFile && fileNames[selectedFile.url]) {
       const currentPolygons = polygons[selectedFile.url] || [];
@@ -49,6 +49,17 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
     // Clear selected polygon when changing files
     setSelectedPolygon(null);
 
+    // Extract file name from path
+    let fileName = null;
+    if (filePath) {
+      fileName = filePath.split("/").pop();
+      console.log(`Setting file name for ${fileUrl}: ${fileName}`);
+      setFileNames(prev => ({
+        ...prev,
+        [fileUrl]: fileName,
+      }));
+    }
+
     // Initialize polygons for this file if not already done
     if (!polygons[fileUrl]) {
       setPolygons(prev => ({
@@ -57,8 +68,65 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
       }));
     }
 
+    // *** NEW CODE: Attempt to load existing polygon data from JSON file ***
+    if (fileName) {
+      try {
+        console.log(`Looking for saved polygons for ${fileName}`);
+        const savedData = await JsonStorageService.fetchPolygonData(fileName);
+
+        if (savedData) {
+          console.log(`Found saved polygon data for ${fileName}:`, savedData);
+
+          // Convert JSON data to polygon objects
+          const loadedPolygons = JsonStorageService.convertJsonToPolygons(
+            savedData,
+            fileUrl
+          );
+
+          if (loadedPolygons.length > 0) {
+            console.log(`Loaded ${loadedPolygons.length} polygons for ${fileName}`);
+
+            // Update the polygons state with loaded polygons
+            setPolygons(prev => ({
+              ...prev,
+              [fileUrl]: loadedPolygons,
+            }));
+
+            // Also update selected polygons to include loaded ones
+            setSelectedPolygons(loadedPolygons);
+            setAllPolygons(loadedPolygons);
+
+            // Show success notification
+            const notification = document.createElement("div");
+            notification.style.position = "fixed";
+            notification.style.bottom = "20px";
+            notification.style.left = "50%";
+            notification.style.transform = "translateX(-50%)";
+            notification.style.backgroundColor = "#4CAF50";
+            notification.style.color = "white";
+            notification.style.padding = "10px 20px";
+            notification.style.borderRadius = "5px";
+            notification.style.zIndex = "9999";
+            notification.textContent = `Loaded ${loadedPolygons.length} saved polygons for ${fileName}`;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+              notification.style.opacity = "0";
+              notification.style.transition = "opacity 0.5s";
+              setTimeout(() => notification.remove(), 500);
+            }, 3000);
+          }
+        } else {
+          console.log(`No saved polygon data found for ${fileName}`);
+        }
+      } catch (error) {
+        console.error(`Error loading saved polygons for ${fileName}:`, error);
+      }
+    }
+
     // IMPORTANT: Reset selectedPolygons to only show polygons for the current file
-    // This fixes the "showing polygons on all images" issue
+    // This code now runs after loading saved polygons
     const currentFilePolygons = (polygons[fileUrl] || []).map(p => ({
       ...p,
       fileUrl: fileUrl, // Ensure correct fileUrl
@@ -69,16 +137,6 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
 
     // Also reset allPolygons the same way
     setAllPolygons(currentFilePolygons);
-
-    // Set the file name for the selected file
-    if (filePath) {
-      const fileName = filePath.split("/").pop();
-      console.log(`Setting file name for ${fileUrl}: ${fileName}`);
-      setFileNames(prev => ({
-        ...prev,
-        [fileUrl]: fileName, // Extract the file name from the file path
-      }));
-    }
   };
 
   const handleProcessPolygons = processedPolygons => {
@@ -612,14 +670,18 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
               </p>
 
               <div className="mb-4 bg-blue-200 rounded-md">
-                <h4 className="text-lg ml-2 text-blue-900 font-semibold">Text Format:</h4>
+                <h4 className="text-lg ml-2 text-blue-900 font-semibold">
+                  Text Format:
+                </h4>
                 <pre className="bg-blue-900 p-4 rounded-md overflow-auto max-h-60 text-white">
                   {JsonStorageService.convertToText(jsonDataPreview)}
                 </pre>
               </div>
 
               <div className="mb-4 bg-blue-200 rounded-md">
-                <h4 className="text-lg ml-2 text-blue-900 font-semibold">JSON Format:</h4>
+                <h4 className="text-lg ml-2 text-blue-900 font-semibold">
+                  JSON Format:
+                </h4>
                 <pre className="p-4 bg-blue-900 rounded-md overflow-auto max-h-60 text-white">
                   {JSON.stringify(jsonDataPreview, null, 2)}
                 </pre>

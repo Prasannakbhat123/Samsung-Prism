@@ -28,7 +28,7 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 w-full h-16 z-50 flex items-center justify-between p-4 text-black shadow-md"
          style={{ backgroundImage: `url(${homebg})` }}>
-      <div className="flex items-center">
+      <div className="flex items-center cursor-pointer" onClick={() => scrollToSection('try')}>
         <img src={IGlogo} alt="Logo" className="w-10 h-10 mr-2" />
         <span className="text-xl font-bold">ImageSegmentor</span>
       </div>

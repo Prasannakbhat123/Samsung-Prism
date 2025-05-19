@@ -81,6 +81,42 @@ class JsonController {
       return res.status(500).json({ error: 'Failed to get JSON files.' });
     }
   }
+
+  async getJsonByName(req, res) {
+    const { fileName } = req.params;
+    
+    if (!fileName) {
+      return res.status(400).json({ error: 'File name is required.' });
+    }
+    
+    try {
+      // Ensure the file name is properly formatted
+      const jsonFileName = fileName.endsWith('.json') ? fileName : `${fileName}.json`;
+      const filePath = path.join(this.jsonDir, jsonFileName);
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'JSON file not found.' });
+      }
+      
+      // Read the JSON file
+      const jsonData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      
+      console.log(`Successfully read JSON from ${filePath}`);
+      
+      return res.status(200).json({ 
+        message: 'JSON data retrieved successfully.', 
+        fileName: jsonFileName,
+        data: jsonData
+      });
+    } catch (error) {
+      console.error('Error retrieving JSON data:', error);
+      return res.status(500).json({ 
+        error: 'Failed to retrieve JSON data.', 
+        details: error.message 
+      });
+    }
+  }
 }
 
 module.exports = JsonController;

@@ -2,6 +2,33 @@
   "imageName": "66073.jpg",
   "classes": [
     {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Star-1",
+          "name": "Star",
+          "coordinates": [
+            [
+              1269,
+              675
+            ],
+            [
+              1461,
+              1317
+            ],
+            [
+              2137,
+              1150
+            ],
+            [
+              1962,
+              508
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "className": "2",
       "instances": [
         {
