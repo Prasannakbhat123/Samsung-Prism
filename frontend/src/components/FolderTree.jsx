@@ -108,8 +108,8 @@ const FolderTree = ({ files, onFileSelect }) => {
   };
 
   return (
-    <div className="w-1/4 bg-[#f0f0f0] text-black p-5 h-full overflow-y-auto shadow-lg border-r-2 border-[#d8d8d8]">
-      <h2 className="text-2xl font-bold mb-4 text-center flex items-center justify-center">
+    <div className="w-1/4 bg-[#f0f0f0] text-black p-5 h-[90vh] overflow-y-auto shadow-lg border-r-2 border-[#d8d8d8]">
+      <h2 className="text-2xl font-bold mb-4 text-center flex items-center justify-center sticky top-0 bg-[#f0f0f0] py-2">
         <Folder className="w-6 h-6 mr-2" /> Folder Tree
       </h2>
       
@@ -139,7 +139,16 @@ const FolderTree = ({ files, onFileSelect }) => {
         </button>
       </div>
       
-      {renderTree(files)}
+      {/* Scrollable file/folder list */}
+      <div className="mt-4">
+        {Object.entries(files).length === 0 ? (
+          <p className="text-gray-500 text-center">No files uploaded yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {renderTree(files)}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
