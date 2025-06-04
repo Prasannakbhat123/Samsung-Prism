@@ -2,100 +2,67 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 class ModelController {
-  constructor() {
-    this.scriptsDir = path.join(__dirname, '../scripts');
-  }
-
-  runModel(req, res) {
+  async runSingleFrame(req, res) {
     try {
       const { frameNumber } = req.body;
       
-      if (!frameNumber) {
-        return res.status(400).json({ error: 'Missing frameNumber parameter' });
+      if (!frameNumber && frameNumber !== 0) {
+        return res.status(400).json({ error: 'Frame number is required' });
       }
-
-      // Convert frameNumber to integer
-      const frameNum = parseInt(frameNumber);
       
-      if (isNaN(frameNum) || frameNum < 2) {
-        return res.status(400).json({ 
-          error: 'Invalid frameNumber. Must be an integer greater than 1' 
-        });
-      }
-
-      console.log('Running model for frame:', frameNum);
+      console.log(`Running model on frame: ${frameNumber}`);
       
       // Path to the Python script
-      const scriptPath = path.join(this.scriptsDir, 'process_single_frame.py');
+      const scriptPath = path.join(__dirname, '..', 'scripts', 'process_single_frame.py');
       
-      // Spawn Python process
-      const pythonProcess = spawn('python3', [
-        scriptPath,
-        frameNum.toString()
-      ]);
-
-      let stdoutData = '';
-      let stderrData = '';
-
+      // Spawn a Python process to run the script
+      const pythonProcess = spawn('python3', [scriptPath, frameNumber.toString()]);
+      
+      let result = '';
+      let errorOutput = '';
+      
+      // Collect data from script output
       pythonProcess.stdout.on('data', (data) => {
-        stdoutData += data.toString();
+        result += data.toString();
+        console.log(`Python stdout: ${data}`);
       });
-
+      
+      // Collect error data if any
       pythonProcess.stderr.on('data', (data) => {
-        stderrData += data.toString();
-        console.error(`Model error: ${data.toString()}`);
+        errorOutput += data.toString();
+        console.error(`Python stderr: ${data}`);
       });
-
+      
+      // Handle process completion
       pythonProcess.on('close', (code) => {
+        console.log(`Python process exited with code ${code}`);
+        
         if (code !== 0) {
-          console.error(`Model process exited with code ${code}`);
+          console.error('Python script execution failed:', errorOutput);
           return res.status(500).json({ 
-            error: 'Model execution failed',
-            details: stderrData,
-            code: code
+            error: 'Failed to process frame', 
+            details: errorOutput 
           });
         }
         
         try {
           // Parse the JSON output from the Python script
-          const result = JSON.parse(stdoutData.trim());
-          
-          if (!result.success) {
-            return res.status(500).json({ 
-              error: result.error || 'Model execution failed',
-              details: result.message
-            });
-          }
-          
-          res.status(200).json({ 
-            message: result.message,
-            success: true
-          });
+          const jsonResult = JSON.parse(result);
+          res.json(jsonResult);
         } catch (parseError) {
-          console.error('Failed to parse Python script output:', parseError);
+          console.error('Failed to parse Python output:', parseError);
           res.status(500).json({ 
-            error: 'Invalid response from model',
-            details: stdoutData
+            error: 'Failed to parse Python script output',
+            details: parseError.message,
+            rawOutput: result
           });
         }
       });
-
-      pythonProcess.on('error', (error) => {
-        console.error('Failed to start Python process:', error);
-        res.status(500).json({ 
-          error: 'Failed to start model process',
-          details: error.message
-        });
-      });
-
     } catch (error) {
-      console.error('Error running model:', error);
-      res.status(500).json({ 
-        error: 'Failed to run model',
-        details: error.message
-      });
+      console.error('Error in runSingleFrame:', error);
+      res.status(500).json({ error: error.message });
     }
   }
 }
 
-module.exports = new ModelController(); 
+module.exports = new ModelController();

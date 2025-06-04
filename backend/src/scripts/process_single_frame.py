@@ -22,13 +22,39 @@ def process_single_frame(current_frame_number):
         current_frame_number (int): The frame number to process (e.g., 1 for frame_000001)
     """
     result = {"success": False, "message": "", "error": None}
+    print(f"Processing frame {current_frame_number}, looking for frame_{current_frame_number:06d}.jpg")
     
     try:
-        # Define paths
+        # Define paths first
         base_dir = Path('/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src')
         frames_dir = base_dir / 'JPEGImages'
         masks_dir = base_dir / 'Annotations'
         output_dir = base_dir / 'predicted_masks'
+        temp_dir = base_dir / 'temp_frames'
+        temp_masks_dir = base_dir / 'temp_masks'
+
+        print(f"Using directories:")
+        print(f"  Frames dir: {frames_dir} (exists: {frames_dir.exists()})")
+        print(f"  Masks dir: {masks_dir} (exists: {masks_dir.exists()})")
+        print(f"  Output dir: {output_dir} (exists: {output_dir.exists()})")
+
+        # Clean up any existing temp directories first
+        if temp_dir.exists():
+            for f in temp_dir.glob('*'):
+                if f.is_symlink() or f.is_file():
+                    f.unlink()
+            temp_dir.rmdir()
+        if temp_masks_dir.exists():
+            for f in temp_masks_dir.glob('*'):
+                if f.is_symlink() or f.is_file():
+                    f.unlink()
+            temp_masks_dir.rmdir()
+
+        # Now create fresh temp directories
+        temp_dir.mkdir(exist_ok=True)
+        temp_masks_dir.mkdir(exist_ok=True)
+
+        print(f"Starting to process frame {current_frame_number}")
         
         # Set up XMem configuration with correct model path
         config = {
@@ -41,11 +67,7 @@ def process_single_frame(current_frame_number):
         if current_frame_number < 1:
             raise ValueError("Cannot process frame 0 - first frame must be manually annotated")
 
-        # Create temporary directory for the two frames we need
-        temp_dir = base_dir / 'temp_frames'
-        temp_dir.mkdir(exist_ok=True)
-
-        # Previous frame number (reference frame)
+        # Create symbolic links for the frames we need
         prev_frame_number = current_frame_number - 1
         
         # Format frame numbers
@@ -68,8 +90,6 @@ def process_single_frame(current_frame_number):
         os.symlink(str(frames_dir / current_frame), str(temp_dir / current_frame))
 
         # Create temporary directory for the reference mask
-        temp_masks_dir = base_dir / 'temp_masks'
-        temp_masks_dir.mkdir(exist_ok=True)
         os.symlink(str(masks_dir / prev_mask), str(temp_masks_dir / prev_mask))
 
         # Ensure output directory exists
@@ -83,7 +103,8 @@ def process_single_frame(current_frame_number):
             frames_with_masks=[prev_frame_number],  # Only use previous frame as reference
             compute_iou=False,
             print_progress=True,
-            overwrite_config=config  # Pass the configuration with correct model paths
+            overwrite_config=config,  # Pass the configuration with correct model paths
+            original_memory_mechanism=True  # Add this to use original XMem memory mechanism
         )
 
         # Move the predicted mask to Annotations directory
@@ -107,13 +128,12 @@ def process_single_frame(current_frame_number):
         result["error"] = str(e)
         result["message"] = f"Error processing frame {current_frame_number}: {str(e)}"
     finally:
-        # Cleanup
-        if temp_dir.exists():
+        if temp_dir and temp_dir.exists():
             for f in temp_dir.glob('*'):
                 if f.is_symlink():
                     f.unlink()
             temp_dir.rmdir()
-        if temp_masks_dir.exists():
+        if temp_masks_dir and temp_masks_dir.exists():
             for f in temp_masks_dir.glob('*'):
                 if f.is_symlink():
                     f.unlink()

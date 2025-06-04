@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const modelController = require('../controllers/modelController');
 
-// POST endpoint to run the model on a specific frame
-router.post('/run', modelController.runModel.bind(modelController));
+// Keep the original route
+router.post('/run', modelController.runSingleFrame);
 
-module.exports = router; 
+// Add the route that the frontend is using
+router.post('/run-single-frame', modelController.runSingleFrame);
+
+module.exports = router;
