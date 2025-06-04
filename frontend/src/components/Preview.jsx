@@ -540,6 +540,8 @@ const Preview = ({
           <ActionButtons 
             joinPolygon={joinPolygon} 
             onExportPolygons={onExportPolygons}
+            currentFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) : null}
+            isFirstFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) === 1 : true}
           />
         </div>
       ) : (

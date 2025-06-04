@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
 const jsonRoutes = require('./routes/jsonRoutes');
+const modelRoutes = require('./routes/modelRoutes');
 
 const app = express();
 
@@ -53,7 +54,8 @@ app.use((req, res, next) => {
 });
 
 // Set up routes
-jsonRoutes(app);
+app.use('/api', jsonRoutes);
+app.use('/api/model', modelRoutes);
 
 // Simple test route
 app.get('/', (req, res) => {
@@ -65,14 +67,12 @@ app.get('/', (req, res) => {
   });
 });
 
-// Helper function to check if folder is writable
+// Helper function to check if a folder is writable
 function checkFolderWritable(folderPath) {
   try {
-    const testFile = path.join(folderPath, '.test-write-permissions');
-    fs.writeFileSync(testFile, 'test');
-    fs.unlinkSync(testFile);
+    fs.accessSync(folderPath, fs.constants.W_OK);
     return true;
-  } catch (e) {
+  } catch (err) {
     return false;
   }
 }
