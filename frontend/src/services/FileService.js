@@ -8,8 +8,11 @@ class FileService {
       a.webkitRelativePath.localeCompare(b.webkitRelativePath)
     );
     
-    sortedFiles.forEach(file => {
-      formData.append('files', file, file.webkitRelativePath);
+    // Add files to FormData with proper frame numbering
+    sortedFiles.forEach((file, index) => {
+      // Create frame filename with 6-digit padding
+      const frameFilename = `frame_${String(index).padStart(6, '0')}.jpg`;
+      formData.append('files', file, frameFilename);
     });
 
     try {

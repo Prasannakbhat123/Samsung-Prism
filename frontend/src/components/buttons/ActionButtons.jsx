@@ -1,56 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import JsonStorageService from '../../services/JsonStorageService';
 
 const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFrame, selectedFile, onUpdatePolygons }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [buttonDisabled, setButtonDisabled] = useState(false);
-  
-  // Add effect to debug why button might be disabled
-  useEffect(() => {
-    const disabled = isFirstFrame || isProcessing || !currentFrame;
-    console.log("Run Model button state:", {
-      isFirstFrame,
-      isProcessing,
-      currentFrame,
-      disabled
-    });
-    setButtonDisabled(disabled);
-  }, [isFirstFrame, isProcessing, currentFrame]);
 
   const handleRunModel = async () => {
-    if (buttonDisabled) {
-      console.log("Button is disabled, cannot run model");
-      return;
-    }
+    if (isFirstFrame || isProcessing || !currentFrame) return;
 
     try {
-      // Log the frame we're actually processing
-      console.log(`Running model for frame number: ${currentFrame} (File: ${selectedFile?.split('/').pop() || 'unknown'})`);
       setIsProcessing(true);
-      
       // Call backend to run model for current frame
       const response = await fetch('http://localhost:3000/api/model/run-single-frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frameNumber: parseInt(currentFrame, 10) })
+        body: JSON.stringify({ frameNumber: currentFrame })
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
-      }
-      
       const data = await response.json();
-      console.log('Model response:', data);
-      
-      if (!data.success) {
-        throw new Error(data.error || data.message || 'Model processing failed');
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Failed to run model');
       }
-      
       // Refetch the JSON for the current image
       const fileName = selectedFile ? selectedFile.split('/').pop() : null;
       if (fileName) {
-        console.log(`Fetching updated polygon data for file: ${fileName}`);
         const jsonData = await JsonStorageService.fetchPolygonData(fileName);
         if (jsonData) {
           const newPolygons = JsonStorageService.convertJsonToPolygons(jsonData, selectedFile);
@@ -61,7 +32,6 @@ const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFra
       }
       alert('Model run successful and polygons updated!');
     } catch (error) {
-      console.error('Error running model:', error);
       alert(`Failed to run model: ${error.message}`);
     } finally {
       setIsProcessing(false);
@@ -85,9 +55,9 @@ const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFra
       </button>
       <button
         onClick={handleRunModel}
-        disabled={buttonDisabled}
+        disabled={isFirstFrame || isProcessing}
         className={`rounded-full text-white px-8 py-2 transition ${
-          buttonDisabled
+          isFirstFrame || isProcessing
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-[#2E3192] hover:bg-[#1a1c4a]'
         }`}
@@ -96,16 +66,11 @@ const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFra
             ? "First frame must be manually annotated"
             : isProcessing 
               ? "Processing..."
-              : !currentFrame
-                ? "No frame selected"
-                : "Run model on current frame"
+              : "Run model on current frame"
         }
       >
         {isProcessing ? "Processing..." : "Run Model"}
       </button>
-      <div className="text-xs text-gray-600 mt-2">
-        {currentFrame !== null && `Current frame: ${currentFrame}`}
-      </div>
     </div>
   );
 };

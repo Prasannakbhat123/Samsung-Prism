@@ -540,33 +540,10 @@ const Preview = ({
           <ActionButtons 
             joinPolygon={joinPolygon} 
             onExportPolygons={onExportPolygons}
-            currentFrame={selectedFile ? 
-              // More robust frame number extraction with fallback
-              (() => {
-                const filename = selectedFile.split('/').pop();
-                console.log("Current filename:", filename);
-                
-                // Try multiple patterns to extract frame number
-                const frameMatch = 
-                  // Try first: frame_000001.jpg pattern
-                  filename.match(/frame_0*(\d+)/)?.[1] || 
-                  // Try second: any numbers in the filename
-                  filename.match(/(\d+)/)?.[1] || 
-                  // Default to 1 (not 0) to prevent first frame detection
-                  '1';
-                
-                console.log("Extracted frame number:", frameMatch);
-                return parseInt(frameMatch, 10);
-              })()
-              : null
-            }
-            isFirstFrame={selectedFile ? 
-              // Only consider it first frame if explicitly frame_000000
-              selectedFile.split('/').pop().match(/frame_0*0\./) !== null
-              : true
-            }
+            currentFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) : null}
+            isFirstFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) === 0 : true}
             selectedFile={selectedFile}
-            onUpdatePolygons={onUpdatePolygons}
+            onUpdatePolygons={setPolygons}
           />
         </div>
       ) : (
