@@ -13,7 +13,7 @@ const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFra
       const response = await fetch('http://localhost:3000/api/model/run-single-frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frameNumber: currentFrame })
+        body: JSON.stringify({ frameNumber: 1}) // change later 
       });
       const data = await response.json();
       if (!response.ok) {
