@@ -1,0 +1,40 @@
+{
+  "imageName": "frame_000000.jpg",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Rectangle-1",
+          "name": "Rectangle",
+          "coordinates": [
+            [
+              71,
+              52
+            ],
+            [
+              143,
+              50
+            ],
+            [
+              43,
+              153
+            ],
+            [
+              69,
+              291
+            ],
+            [
+              150,
+              317
+            ],
+            [
+              221,
+              203
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

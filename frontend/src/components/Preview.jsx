@@ -542,6 +542,8 @@ const Preview = ({
             onExportPolygons={onExportPolygons}
             currentFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) : null}
             isFirstFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) === 0 : true}
+            selectedFile={selectedFile}
+            onUpdatePolygons={setPolygons}
           />
         </div>
       ) : (

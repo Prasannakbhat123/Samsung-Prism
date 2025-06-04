@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import JsonStorageService from '../../services/JsonStorageService';
 
-const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFrame }) => {
+const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFrame, selectedFile, onUpdatePolygons }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRunModel = async () => {
@@ -8,30 +9,29 @@ const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFra
 
     try {
       setIsProcessing(true);
-      
-      const response = await fetch('http://localhost:3000/api/model/run', {
+      // Call backend to run model for current frame
+      const response = await fetch('http://localhost:3000/api/model/run-single-frame', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          frameNumber: currentFrame
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frameNumber: currentFrame })
       });
-
       const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to run model');
+        throw new Error(data.error || data.message || 'Failed to run model');
       }
-
-      console.log('Model execution successful:', data);
-      
-      // You might want to trigger a refresh of the UI here
-      // or notify the parent component of the success
-
+      // Refetch the JSON for the current image
+      const fileName = selectedFile ? selectedFile.split('/').pop() : null;
+      if (fileName) {
+        const jsonData = await JsonStorageService.fetchPolygonData(fileName);
+        if (jsonData) {
+          const newPolygons = JsonStorageService.convertJsonToPolygons(jsonData, selectedFile);
+          if (typeof onUpdatePolygons === 'function') {
+            onUpdatePolygons({ [selectedFile]: newPolygons });
+          }
+        }
+      }
+      alert('Model run successful and polygons updated!');
     } catch (error) {
-      console.error('Error running model:', error);
       alert(`Failed to run model: ${error.message}`);
     } finally {
       setIsProcessing(false);
