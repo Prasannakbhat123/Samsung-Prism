@@ -1,7 +1,27 @@
 const express = require('express');
-const app = require('./app');
-const PORT = process.env.PORT || 3000;
+const cors = require('cors');
+const setRoutes = require('./routes/jsonRoutes');
+const maskWatcher = require('./utils/maskWatcher');
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+const app = express();
+const port = 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// Set up routes
+setRoutes(app);
+
+// Start the mask watcher
+maskWatcher.start();
+
+// Handle server shutdown
+process.on('SIGINT', () => {
+    console.log('\nShutting down server...');
+    maskWatcher.stop();
+    process.exit();
+});
+
+app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
 });

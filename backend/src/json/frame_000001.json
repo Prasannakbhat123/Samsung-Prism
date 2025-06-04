@@ -2,51 +2,27 @@
   "imageName": "frame_000001.jpg",
   "classes": [
     {
-      "className": "1",
+      "className": "2",
       "instances": [
         {
-          "instanceId": "Rectangle-1",
-          "name": "Rectangle",
+          "instanceId": "Circle-1",
+          "name": "Circle",
           "coordinates": [
             [
-              61,
-              53
+              202,
+              78
             ],
             [
-              74,
-              104
+              202,
+              178
             ],
             [
-              75,
-              147
+              263,
+              185
             ],
             [
-              79,
-              180
-            ],
-            [
-              73,
-              258
-            ],
-            [
-              101,
-              277
-            ],
-            [
-              187,
-              276
-            ],
-            [
-              233,
-              207
-            ],
-            [
-              186,
-              174
-            ],
-            [
-              140,
-              66
+              328,
+              92
             ]
           ]
         }

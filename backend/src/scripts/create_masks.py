@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 from PIL import Image
 import glob
+import argparse
 
 def create_mask_from_polygons(json_path, output_dir):
     """
@@ -22,9 +23,8 @@ def create_mask_from_polygons(json_path, output_dir):
         if not image_name.endswith('.jpg'):
             image_name += '.jpg'
         
-        # Construct the exact image path
-        image_path = os.path.join('/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/temp', 
-                                image_name, image_name)
+        # Construct the exact image path - now directly in JPEGImages
+        image_path = os.path.join('/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/JPEGImages', image_name)
             
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Could not find image file: {image_path}")
@@ -74,6 +74,11 @@ def create_mask_from_polygons(json_path, output_dir):
         raise
 
 if __name__ == "__main__":
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Create masks from JSON annotations')
+    parser.add_argument('--file', help='Specific JSON file to process')
+    args = parser.parse_args()
+
     # Define directories using absolute paths
     json_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/json'
     output_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/Annotations'
@@ -81,10 +86,28 @@ if __name__ == "__main__":
     print(f"JSON directory: {json_dir}")
     print(f"Output directory: {output_dir}")
 
-    # Process specific JSON file
-    json_file = os.path.join(json_dir, "frame_000001.json")
     try:
-        print(f"\nProcessing {os.path.basename(json_file)}...")
-        create_mask_from_polygons(json_file, output_dir)
+        if args.file:
+            # Process specific file
+            json_file = os.path.join(json_dir, args.file)
+            if not os.path.exists(json_file):
+                raise FileNotFoundError(f"JSON file not found: {json_file}")
+            print(f"\nProcessing specific file: {args.file}")
+            create_mask_from_polygons(json_file, output_dir)
+        else:
+            # Process all JSON files
+            json_files = glob.glob(os.path.join(json_dir, "*.json"))
+            json_files = [f for f in json_files if not f.endswith('.gitkeep')]  # Exclude .gitkeep
+            
+            if not json_files:
+                print("No JSON files found to process")
+            else:
+                for json_file in sorted(json_files):
+                    try:
+                        print(f"\nProcessing {os.path.basename(json_file)}...")
+                        create_mask_from_polygons(json_file, output_dir)
+                    except Exception as e:
+                        print(f"Failed to process {json_file}: {str(e)}")
     except Exception as e:
-        print(f"Failed to process {json_file}: {str(e)}") 
+        print(f"Error: {str(e)}")
+        exit(1) 

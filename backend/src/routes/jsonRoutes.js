@@ -7,21 +7,17 @@ const multer = require('multer');
 const router = express.Router();
 const jsonController = new JsonController();
 
-// Configure multer for file uploads
+// Configure multer for file uploads with linear structure
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Get the root folder name and create a temp directory for it
-    const rootFolderName = file.originalname.split('/')[0];
-    const tempBasePath = path.join(__dirname, '..', 'temp', rootFolderName);
-    
-    // Create the directory structure recursively
+    const tempBasePath = path.join(__dirname, '..', 'temp');
     fs.mkdirSync(tempBasePath, { recursive: true });
     cb(null, tempBasePath);
   },
   filename: (req, file, cb) => {
-    // Preserve the original file name from the path
-    const originalName = file.originalname.split('/').pop();
-    cb(null, originalName);
+    // Extract just the filename without the path
+    const filename = file.originalname.split('/').pop();
+    cb(null, filename);
   }
 });
 
@@ -47,10 +43,7 @@ const setRoutes = (app) => {
   // POST route to handle file uploads
   router.post('/upload-files', upload.array('files'), (req, res) => {
     try {
-      // Get the root folder name from the first file
-      const firstFile = req.files[0];
-      const rootFolder = firstFile.originalname.split('/')[0];
-      const tempFolderPath = path.join(__dirname, '..', 'temp', rootFolder);
+      const tempFolderPath = path.join(__dirname, '..', 'temp');
 
       res.status(200).json({ 
         message: 'Files uploaded successfully',

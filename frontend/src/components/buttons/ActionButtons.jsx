@@ -16,6 +16,11 @@ const ActionButtons = ({ joinPolygon, onExportPolygons }) => {
       >
         View JSON
       </button>
+      <button
+        className="bg-[#2E3192] rounded-full text-white px-8 py-2 hover:bg-[#1a1c4a] transition"
+      >
+        Run Model
+      </button>
     </div>
   );
 };

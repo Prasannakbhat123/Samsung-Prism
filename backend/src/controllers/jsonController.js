@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 
 class JsonController {
   constructor() {
@@ -25,96 +26,126 @@ class JsonController {
     }
   }
 
-  async saveJson(req, res) {
-    const { fileName, jsonData } = req.body;
-
-    if (!fileName || !jsonData) {
-      return res.status(400).json({ error: 'File name and JSON data are required.' });
+  // Helper method to create mask after JSON save
+  createMask(jsonFileName) {
+    // Remove .json extension if it exists
+    const baseFileName = jsonFileName.replace(/\.json$/, '');
+    const scriptPath = path.join(__dirname, '../scripts/create_masks.py');
+    
+    console.log('Creating mask for:', baseFileName);
+    console.log('Script path:', scriptPath);
+    
+    // Verify script exists
+    if (!fs.existsSync(scriptPath)) {
+      console.error('Error: create_masks.py script not found at:', scriptPath);
+      return;
     }
 
-    try {
-      // Ensure the file name is properly formatted
-      const jsonFileName = fileName.endsWith('.json') ? fileName : `${fileName}.json`;
-      const filePath = path.join(this.jsonDir, jsonFileName);
+    // Verify JSON file exists
+    const jsonPath = path.join(this.jsonDir, `${baseFileName}.json`);
+    if (!fs.existsSync(jsonPath)) {
+      console.error('Error: JSON file not found at:', jsonPath);
+      return;
+    }
 
-      // Write the file with detailed logging
-      console.log(`Saving JSON file to: ${filePath}`);
-      console.log(`JSON data: ${JSON.stringify(jsonData).substring(0, 100)}...`);
+    // Spawn Python process with specific file argument
+    console.log('Executing Python script with args:', ['--file', `${baseFileName}.json`]);
+    const pythonProcess = spawn('python3', [
+      scriptPath,
+      '--file',
+      `${baseFileName}.json`
+    ]);
+
+    pythonProcess.stdout.on('data', (data) => {
+      console.log(`Mask creation output: ${data.toString()}`);
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`Mask creation error: ${data.toString()}`);
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code !== 0) {
+        console.error(`Mask creation process exited with code ${code}`);
+      } else {
+        console.log('Mask creation completed successfully');
+      }
+    });
+
+    pythonProcess.on('error', (error) => {
+      console.error('Failed to start Python process:', error);
+    });
+  }
+
+  saveJson(req, res) {
+    try {
+      const { fileName, jsonData } = req.body;
       
+      if (!fileName || !jsonData) {
+        return res.status(400).json({ error: 'Missing fileName or jsonData' });
+      }
+
+      // Remove .json extension if it exists and add it back
+      const baseFileName = fileName.replace(/\.json$/, '');
+      const filePath = path.join(this.jsonDir, `${baseFileName}.json`);
+      
+      console.log('Saving JSON file:', filePath);
+      
+      // Save the JSON file
       fs.writeFileSync(filePath, JSON.stringify(jsonData, null, 2));
+      console.log('JSON file saved successfully');
       
-      console.log(`✅ Successfully saved JSON to ${filePath}`);
-      
-      return res.status(200).json({ 
-        message: 'JSON data saved successfully.', 
-        filePath: filePath,
-        fileName: jsonFileName
+      // Create mask after saving JSON
+      console.log('Triggering mask creation for:', baseFileName);
+      this.createMask(baseFileName);
+
+      res.status(200).json({ 
+        message: 'JSON saved successfully',
+        fileName: `${baseFileName}.json`
       });
     } catch (error) {
-      console.error('❌ Error saving JSON data:', error);
-      return res.status(500).json({ 
-        error: 'Failed to save JSON data.', 
-        details: error.message,
-        stack: error.stack
+      console.error('Error saving JSON:', error);
+      res.status(500).json({ 
+        error: 'Failed to save JSON',
+        details: error.message
       });
     }
   }
-  
-  async getAllJson(req, res) {
+
+  getAllJson(req, res) {
     try {
       const files = fs.readdirSync(this.jsonDir)
         .filter(file => file.endsWith('.json'))
-        .sort((a, b) => a.localeCompare(b))
-        .map(file => {
-          const filePath = path.join(this.jsonDir, file);
-          const stats = fs.statSync(filePath);
-          return {
-            name: file,
-            path: filePath,
-            size: stats.size,
-            lastModified: stats.mtime
-          };
-        });
-        
-      return res.status(200).json({ files });
+        .map(file => file.replace('.json', ''));
+      
+      res.status(200).json(files);
     } catch (error) {
       console.error('Error getting JSON files:', error);
-      return res.status(500).json({ error: 'Failed to get JSON files.' });
+      res.status(500).json({ 
+        error: 'Failed to get JSON files',
+        details: error.message
+      });
     }
   }
 
-  async getJsonByName(req, res) {
-    const { fileName } = req.params;
-    
-    if (!fileName) {
-      return res.status(400).json({ error: 'File name is required.' });
-    }
-    
+  getJsonByName(req, res) {
     try {
-      // Ensure the file name is properly formatted
-      const jsonFileName = fileName.endsWith('.json') ? fileName : `${fileName}.json`;
-      const filePath = path.join(this.jsonDir, jsonFileName);
+      const { fileName } = req.params;
+      // Remove .json extension if it exists and add it back
+      const baseFileName = fileName.replace(/\.json$/, '');
+      const filePath = path.join(this.jsonDir, `${baseFileName}.json`);
       
-      // Check if file exists
       if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'JSON file not found.' });
+        return res.status(404).json({ error: 'File not found' });
       }
       
-      // Read the JSON file
       const jsonData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      
-      console.log(`Successfully read JSON from ${filePath}`);
-      
-      return res.status(200).json({ 
-        message: 'JSON data retrieved successfully.', 
-        fileName: jsonFileName,
-        data: jsonData
-      });
+      res.status(200).json(jsonData);
     } catch (error) {
-      console.error('Error retrieving JSON data:', error);
-      return res.status(500).json({ 
-        error: 'Failed to retrieve JSON data.', 
-        details: error.message 
+      console.error('Error reading JSON file:', error);
+      res.status(500).json({ 
+        error: 'Failed to read JSON file',
+        details: error.message
       });
     }
   }
