@@ -7,18 +7,19 @@ from pathlib import Path
 import argparse
 
 # Add the XMem project root to Python path
-xmem_root = str(Path('/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/XMem2-cpu-web'))
-if xmem_root not in sys.path:
-    sys.path.append(xmem_root)
+xmem_root = Path('/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/XMem2-cpu-web')
+if str(xmem_root) not in sys.path:
+    sys.path.append(str(xmem_root))
 
 from inference.run_on_video import run_on_video
+import torch
 
 def process_single_frame(current_frame_number):
     """
     Process a single frame using the previous frame's mask as reference.
     
     Args:
-        current_frame_number (int): The frame number to process (e.g., 2 for frame_000002)
+        current_frame_number (int): The frame number to process (e.g., 1 for frame_000001)
     """
     result = {"success": False, "message": "", "error": None}
     
@@ -28,10 +29,17 @@ def process_single_frame(current_frame_number):
         frames_dir = base_dir / 'JPEGImages'
         masks_dir = base_dir / 'Annotations'
         output_dir = base_dir / 'predicted_masks'
+        
+        # Set up XMem configuration with correct model path
+        config = {
+            'model': str(xmem_root / 'saves' / 'XMem.pth'),
+            's2m_model': str(xmem_root / 'saves' / 's2m.pth'),
+            'fbrs_model': str(xmem_root / 'saves' / 'fbrs.pth')
+        }
 
         # Ensure the frame number is valid
-        if current_frame_number <= 1:
-            raise ValueError("Cannot process frame 1 or lower - first frame must be manually annotated")
+        if current_frame_number < 1:
+            raise ValueError("Cannot process frame 0 - first frame must be manually annotated")
 
         # Create temporary directory for the two frames we need
         temp_dir = base_dir / 'temp_frames'
@@ -46,8 +54,14 @@ def process_single_frame(current_frame_number):
         prev_mask = f"frame_{prev_frame_number:06d}.png"
 
         # Check if previous mask exists
-        if not (masks_dir / prev_mask).exists():
-            raise FileNotFoundError(f"Previous frame's mask not found: {prev_mask}")
+        prev_mask_path = masks_dir / prev_mask
+        if not prev_mask_path.exists():
+            raise FileNotFoundError(f"Previous frame's mask not found: {prev_mask_path}")
+
+        # Check if current frame exists
+        current_frame_path = frames_dir / current_frame
+        if not current_frame_path.exists():
+            raise FileNotFoundError(f"Current frame not found: {current_frame_path}")
 
         # Create symbolic links for the frames we need
         os.symlink(str(frames_dir / prev_frame), str(temp_dir / prev_frame))
@@ -68,14 +82,16 @@ def process_single_frame(current_frame_number):
             masks_out_path=str(output_dir),
             frames_with_masks=[prev_frame_number],  # Only use previous frame as reference
             compute_iou=False,
-            print_progress=True
+            print_progress=True,
+            overwrite_config=config
         )
 
         # Move the predicted mask to Annotations directory
         predicted_mask = f"frame_{current_frame_number:06d}.png"
-        if (output_dir / 'masks' / predicted_mask).exists():
+        predicted_mask_path = output_dir / 'masks' / predicted_mask
+        if predicted_mask_path.exists():
             os.rename(
-                str(output_dir / 'masks' / predicted_mask),
+                str(predicted_mask_path),
                 str(masks_dir / predicted_mask)
             )
 
@@ -108,7 +124,7 @@ def process_single_frame(current_frame_number):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process a single frame using the previous frame as reference')
-    parser.add_argument('frame_number', type=int, help='Frame number to process (e.g., 2 for frame_000002)')
+    parser.add_argument('frame_number', type=int, help='Frame number to process (e.g., 1 for frame_000001)')
     args = parser.parse_args()
 
     process_single_frame(args.frame_number) 

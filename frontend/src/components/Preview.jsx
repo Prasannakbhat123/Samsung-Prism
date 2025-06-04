@@ -541,7 +541,7 @@ const Preview = ({
             joinPolygon={joinPolygon} 
             onExportPolygons={onExportPolygons}
             currentFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) : null}
-            isFirstFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) === 1 : true}
+            isFirstFrame={selectedFile ? parseInt(selectedFile.match(/\d+/)[0]) === 0 : true}
           />
         </div>
       ) : (
