@@ -64,6 +64,7 @@ class JsonController {
     try {
       const files = fs.readdirSync(this.jsonDir)
         .filter(file => file.endsWith('.json'))
+        .sort((a, b) => a.localeCompare(b))
         .map(file => {
           const filePath = path.join(this.jsonDir, file);
           const stats = fs.statSync(filePath);

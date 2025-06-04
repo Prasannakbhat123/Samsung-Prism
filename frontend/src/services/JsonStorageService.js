@@ -47,6 +47,11 @@ class JsonStorageService {
   savePolygonData(fileName, fileUrl, polygons) {
     if (!fileName || !fileUrl || !polygons) return null;
     
+    // If fileName is not provided or is unnamed-file, extract it from fileUrl
+    if (!fileName || fileName === 'unnamed-file') {
+      fileName = fileUrl.split('/').pop();
+    }
+    
     // Remove file extension for cleaner filenames
     const baseFileName = fileName.split('.')[0];
     const jsonFileName = `${baseFileName}.json`;

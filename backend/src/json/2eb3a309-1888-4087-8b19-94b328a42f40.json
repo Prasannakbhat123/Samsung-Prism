@@ -1,0 +1,119 @@
+{
+  "imageName": "2eb3a309-1888-4087-8b19-94b328a42f40",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Rectangle-1",
+          "name": "Rectangle",
+          "coordinates": [
+            [
+              105,
+              82
+            ],
+            [
+              120,
+              180
+            ],
+            [
+              239,
+              178
+            ],
+            [
+              257,
+              87
+            ]
+          ]
+        },
+        {
+          "instanceId": "Triangle-1",
+          "name": "Triangle",
+          "coordinates": [
+            [
+              469,
+              115
+            ],
+            [
+              504,
+              89
+            ],
+            [
+              518,
+              125
+            ],
+            [
+              502,
+              167
+            ],
+            [
+              539,
+              192
+            ],
+            [
+              494,
+              233
+            ],
+            [
+              418,
+              201
+            ]
+          ]
+        },
+        {
+          "instanceId": "Star-1",
+          "name": "Star",
+          "coordinates": [
+            [
+              402,
+              372
+            ],
+            [
+              324,
+              425
+            ],
+            [
+              273,
+              385
+            ],
+            [
+              321,
+              320
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "className": "2",
+      "instances": [
+        {
+          "instanceId": "Rectangle-1",
+          "name": "Rectangle",
+          "coordinates": [
+            [
+              543,
+              280
+            ],
+            [
+              580,
+              311
+            ],
+            [
+              599,
+              332
+            ],
+            [
+              531,
+              364
+            ],
+            [
+              500,
+              323
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

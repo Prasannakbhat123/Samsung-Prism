@@ -403,7 +403,8 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
       return;
     }
 
-    const fileName = fileNames[selectedFile.url] || "unnamed-file";
+    // Extract the actual file name from the URL if not in fileNames
+    const fileName = fileNames[selectedFile.url] || selectedFile.url.split('/').pop();
     const imagePolygons = polygons[selectedFile.url] || [];
 
     if (imagePolygons.length === 0) {

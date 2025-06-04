@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import FileService from "../services/FileService";
 
 const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
   const [files, setFiles] = useState({});
@@ -8,12 +9,14 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
 
   const handleFileUpload = (event) => {
     const uploadedFiles = Array.from(event.target.files);
-    const newFiles = uploadedFiles.map((file) => ({
-      name: file.name,
-      type: "file",
-      file,
-      url: URL.createObjectURL(file),
-    }));
+    const newFiles = uploadedFiles
+      .sort((a, b) => a.name.localeCompare(b.name)) // Sort files by name
+      .map((file) => ({
+        name: file.name,
+        type: "file",
+        file,
+        url: URL.createObjectURL(file),
+      }));
 
     if (breadcrumbs.length === 0) {
       // Adding files to root
@@ -49,11 +52,16 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
     }
   };
 
-  const handleFolderUpload = (event) => {
-    const uploadedFiles = Array.from(event.target.files);
+  const handleFolderUpload = async (event) => {
+    const uploadedFiles = Array.from(event.target.files)
+      .sort((a, b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath)); // Sort by full path
+    
+    // Get the root folder name from the first file's path
+    const rootFolderName = uploadedFiles[0]?.webkitRelativePath.split('/')[0];
+    
     let folderStructure = { ...files };
     
-    // If we're in a subfolder, we need to add the files to that folder
+    // Process files for the UI
     if (breadcrumbs.length > 0) {
       let target = folderStructure;
       
@@ -84,7 +92,7 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
         }
       });
     } else {
-      // Adding to root (original behavior)
+      // Adding to root
       uploadedFiles.forEach((file) => {
         const path = file.webkitRelativePath.split("/");
         let current = folderStructure;
@@ -116,6 +124,19 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
     }
     
     setCurrentFolder(updatedCurrentFolder);
+
+    // Create JPEGImages folder copy in the backend
+    try {
+      // First save files to temp folder
+      const tempFolderPath = await FileService.saveFilesToTemp(uploadedFiles, rootFolderName);
+      
+      // Then create the JPEGImages folder
+      await FileService.createJPEGImagesFolder(tempFolderPath);
+
+      console.log('✅ Created JPEGImages folder successfully');
+    } catch (error) {
+      console.error('❌ Error creating JPEGImages folder:', error);
+    }
   };
 
   const removeItem = (itemName, isFolder) => {

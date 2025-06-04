@@ -63,7 +63,21 @@ const FolderTree = ({ files, onFileSelect }) => {
   };
 
   const renderTree = (items, level = 0) => {
-    return Object.keys(items).map((key) => {
+    // Sort items by type (folders first) and then by name
+    const sortedKeys = Object.keys(items).sort((a, b) => {
+      const itemA = items[a];
+      const itemB = items[b];
+      
+      // If both are the same type, sort by name
+      if (itemA.type === itemB.type) {
+        return a.localeCompare(b);
+      }
+      
+      // Folders come before files
+      return itemA.type === "folder" ? -1 : 1;
+    });
+
+    return sortedKeys.map((key) => {
       const item = items[key];
 
       return (
