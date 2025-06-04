@@ -83,7 +83,7 @@ def process_single_frame(current_frame_number):
             frames_with_masks=[prev_frame_number],  # Only use previous frame as reference
             compute_iou=False,
             print_progress=True,
-            overwrite_config=config
+            overwrite_config=config  # Pass the configuration with correct model paths
         )
 
         # Move the predicted mask to Annotations directory
