@@ -10,6 +10,15 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 
+// Add a health check endpoint
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Backend server is running' });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Backend API is healthy' });
+});
+
 // Set up routes
 setRoutes(app);
 

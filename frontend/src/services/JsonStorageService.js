@@ -93,12 +93,17 @@ class JsonStorageService {
   getPolygonData(fileName) {
     if (!fileName) return null;
     
+    // Extract just the filename without path and remove file extension
+    const fullFileName = fileName.includes('/') || fileName.includes('\\') 
+      ? fileName.split(/[/\\]/).pop() 
+      : fileName;
+    
     // Remove file extension if present
-    const baseFileName = fileName.split('.')[0];
+    const baseFileName = fullFileName.split('.')[0];
     const savedData = this.jsonStorage[baseFileName]?.data;
     
     if (!savedData) {
-      console.log(`No saved data found for ${fileName} (${baseFileName})`);
+      console.log(`No saved data found for ${fullFileName} (${baseFileName})`);
       console.log("Available data keys:", Object.keys(this.jsonStorage));
     }
     
@@ -113,8 +118,13 @@ class JsonStorageService {
   async fetchPolygonData(fileName) {
     if (!fileName) return null;
     
+    // Extract just the filename without path
+    const fullFileName = fileName.includes('/') || fileName.includes('\\') 
+      ? fileName.split(/[/\\]/).pop() 
+      : fileName;
+    
     // Remove file extension and replace with .json
-    const baseFileName = fileName.split('.')[0];
+    const baseFileName = fullFileName.split('.')[0];
     const jsonFileName = `${baseFileName}.json`;
     
     try {
@@ -133,7 +143,18 @@ class JsonStorageService {
       const result = await response.json();
       console.log(`Successfully fetched polygon data for ${jsonFileName}`);
       
-      return result.data;
+      // Store the fetched data in memory cache
+      this.jsonStorage[baseFileName] = {
+        fileUrl: fileName,
+        data: result,
+        lastUpdated: new Date().toISOString(),
+        jsonFilePath: `${this.jsonFolderPath}${jsonFileName}`,
+        jsonFileName: jsonFileName
+      };
+      
+      this._saveToLocalStorage();
+      
+      return result;
     } catch (error) {
       console.error(`Error fetching polygon data for ${jsonFileName}:`, error);
       return null;

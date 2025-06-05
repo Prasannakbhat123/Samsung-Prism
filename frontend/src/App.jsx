@@ -6,6 +6,7 @@ import Footer from "./components/Footer";
 import Faq from "./components/Faq";
 import ViewPage from "./components/ViewPage";
 import homebg from "./assets/homebg.jpg";
+import blobMapper from "./utils/BlobMapper";
 
 const App = () => {
   const [uploadedFiles, setUploadedFiles] = useState({});
@@ -50,6 +51,30 @@ const App = () => {
     // Save files to localStorage
     localStorage.setItem("uploadedFiles", JSON.stringify(files));
   };
+
+  // Add this function to App component to initialize blobMapper with file context
+  const initializeBlobMapper = (files) => {
+    if (!files || !Array.isArray(files) || files.length === 0) return;
+
+    const mapping = {};
+    files.forEach((file) => {
+      if (file.url && file.name) {
+        mapping[file.url] = file.name;
+      }
+    });
+
+    blobMapper.mapFiles(mapping);
+    console.log(
+      "App: Initialized BlobMapper with",
+      Object.keys(mapping).length,
+      "files"
+    );
+  };
+
+  // Call initializeBlobMapper whenever uploadedFiles change
+  useEffect(() => {
+    initializeBlobMapper(Object.values(uploadedFiles));
+  }, [uploadedFiles]);
 
   return (
     <div
