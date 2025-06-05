@@ -548,31 +548,34 @@ const Preview = ({
 
   // Update mouse move handler with the same coordinate transformation
   const handleMouseMove = (e) => {
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img || !selectedFile) return;
+    
+    const rect = canvas.getBoundingClientRect();
+
+    // Calculate scale based on canvas and image dimensions
+    const scaleX = img.naturalWidth / canvas.width;
+    const scaleY = img.naturalHeight / canvas.height;
+
+    // Get the center of the canvas
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    // Calculate mouse position in canvas coordinates
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Calculate position relative to center with zoom correction
+    const relativeX = (mouseX - centerX) / zoomLevel + centerX;
+    const relativeY = (mouseY - centerY) / zoomLevel + centerY;
+
+    // Convert to original image coordinates
+    const x = relativeX * scaleX;
+    const y = relativeY * scaleY;
+
+    // Handle point dragging
     if (isDraggingPoint && selectedPointIndex && selectedFile) {
-      const canvas = canvasRef.current;
-      const img = imageRef.current;
-      const rect = canvas.getBoundingClientRect();
-
-      // Calculate scale based on canvas and image dimensions
-      const scaleX = img.naturalWidth / canvas.width;
-      const scaleY = img.naturalHeight / canvas.height;
-
-      // Get the center of the canvas
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-
-      // Calculate mouse position in canvas coordinates
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      // Calculate position relative to center with zoom correction
-      const relativeX = (mouseX - centerX) / zoomLevel + centerX;
-      const relativeY = (mouseY - centerY) / zoomLevel + centerY;
-
-      // Convert to original image coordinates
-      const x = relativeX * scaleX;
-      const y = relativeY * scaleY;
-
       // Update the polygon point
       setPolygons(prevPolygons => {
         const filePolygons = [...(prevPolygons[selectedFile] || [])];
@@ -599,13 +602,54 @@ const Preview = ({
         return prevPolygons;
       });
     }
+    
+    // Handle polygon dragging with move tool
+    else if (currentTool === "move" && isDraggingPolygon && hoveredPolygonIndex !== null) {
+      const currentPolygons = [...(polygons[selectedFile] || [])];
+      if (currentPolygons[hoveredPolygonIndex] && currentPolygons[hoveredPolygonIndex].points) {
+        const dx = x - dragStartPos.x;
+        const dy = y - dragStartPos.y;
+        
+        // Update all points of the polygon
+        currentPolygons[hoveredPolygonIndex].points = currentPolygons[hoveredPolygonIndex].points.map(point => ({
+          x: point.x + dx,
+          y: point.y + dy,
+        }));
+        
+        // Update state
+        const updatedPolygons = {
+          ...polygons,
+          [selectedFile]: currentPolygons,
+        };
+        
+        setPolygons(updatedPolygons);
+        setDragStartPos({ x, y });
+        
+        // Redraw canvas
+        setTimeout(() => {
+          if (canvasRef.current && imageRef.current) {
+            redrawCanvas(selectedFile, canvasRef.current, imageRef.current, 
+              updatedPolygons, currentPolygon, selectedPolygon, displayMode, pointRadius, zoomLevel);
+          }
+        }, 10);
+      }
+    }
   };
 
   const handleMouseUp = () => {
+    // Handle point dragging completion
     if (isDraggingPoint) {
       setIsDraggingPoint(false);
       // Update parent component with updated polygons
       onUpdatePolygons(polygons);
+    }
+    
+    // Handle polygon moving completion
+    if (currentTool === "move" && isDraggingPolygon) {
+      setIsDraggingPolygon(false);
+      // Ensure we update the parent component with the final polygon positions
+      onUpdatePolygons(polygons);
+      console.log("Move completed - updated polygon positions");
     }
   };
 

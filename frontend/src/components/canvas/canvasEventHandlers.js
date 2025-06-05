@@ -12,10 +12,22 @@ export const handleMouseUp = (
   setHoveredPolygonIndex,
   isDraggingPoint,
   selectedFile,
-  redrawCanvas
+  redrawCanvas,
+  polygons,
+  onUpdatePolygons,
+  hoveredPolygonIndex
 ) => {
   // End panning if active
   endPan();
+  
+  // Check if we were dragging a polygon with move tool
+  if (currentTool === "move" && isDraggingPolygon && hoveredPolygonIndex !== null && selectedFile) {
+    // Make sure to update the parent component with the final polygon state
+    if (typeof onUpdatePolygons === 'function' && polygons) {
+      onUpdatePolygons(polygons);
+      console.log("Updated polygons after move operation", polygons[selectedFile]);
+    }
+  }
 
   // Reset dragging states
   setIsDraggingPoint(false);
@@ -199,19 +211,39 @@ export const handleMouseMove = (
           const dx = x - dragStartPos.x;
           const dy = y - dragStartPos.y;
 
+          // Update all points in the polygon
           newPolygons[polyIndex].points = newPolygons[polyIndex].points.map(point => ({
             x: point.x + dx,
             y: point.y + dy,
           }));
+
+          // If we have original points, update those too to maintain proper reference
+          if (newPolygons[polyIndex].originalPoints) {
+            newPolygons[polyIndex].originalPoints = newPolygons[polyIndex].originalPoints.map(point => ({
+              x: point.x + dx,
+              y: point.y + dy,
+            }));
+          }
 
           const updatedPolygons = {
             ...polygons,
             [selectedFile]: newPolygons,
           };
 
-          setPolygons(updatedPolygons);
+          // Make sure we're updating the state with the function
+          if (typeof setPolygons === 'function') {
+            setPolygons(updatedPolygons);
+          }
+          
+          // Update drag start position for continuous movement
           setDragStartPos({ x, y });
-          onUpdatePolygons(updatedPolygons);
+          
+          // Notify parent component about the update
+          if (typeof onUpdatePolygons === 'function') {
+            onUpdatePolygons(updatedPolygons);
+          }
+          
+          // Redraw the canvas with the updated polygon
           redrawCanvas(selectedFile);
         }
         break;
