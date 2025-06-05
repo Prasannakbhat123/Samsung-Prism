@@ -81,9 +81,6 @@ export const handleMouseMove = (
     return;
   }
 
-  const img = imageRef.current;
-  const rect = canvas.getBoundingClientRect();
-
   // Calculate mouse position with proper scaling and pan/zoom
   const canvasX = e.clientX - rect.left;
   const canvasY = e.clientY - rect.top;

@@ -25,9 +25,11 @@ export const redrawCanvas = (
   selectedPolygon,
   displayMode,
   pointRadius,
-  zoomLevel = 1
+  zoomLevel = 1,
+  panOffset = { x: 0, y: 0 },
+  imageLoadError = false
 ) => {
-  console.log(`Redrawing Canvas for File: ${file} with zoom: ${zoomLevel}`);
+  console.log(`Redrawing Canvas for File: ${file} with zoom: ${zoomLevel}, pan: (${panOffset.x}, ${panOffset.y})`);
   if (!canvas || !img) return;
 
   const ctx = canvas.getContext("2d");
@@ -38,11 +40,15 @@ export const redrawCanvas = (
   // Save the context state
   ctx.save();
   
-  // Apply zoom transformation
+  // Apply pan and zoom transformations
+  // First translate to center
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
   
-  // Move to center, scale, then move back
+  // Apply pan offset
+  ctx.translate(panOffset.x, panOffset.y);
+  
+  // Apply zoom with center point as origin
   ctx.translate(centerX, centerY);
   ctx.scale(zoomLevel, zoomLevel);
   ctx.translate(-centerX, -centerY);

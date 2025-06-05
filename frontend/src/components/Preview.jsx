@@ -45,7 +45,11 @@ const Preview = ({
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [lastSelectedPolygonByFile, setLastSelectedPolygonByFile] = useState({});
   const [imageLoadError, setImageLoadError] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1); // Add zoom state
+  const [zoomLevel, setZoomLevel] = useState(1);
+  // Add pan state
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   // References
   const imageRef = useRef(null);
@@ -329,250 +333,111 @@ const Preview = ({
 
   const handleResetZoom = () => {
     setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
   };
 
-  // Handle canvas events with proper zoom coordinate transformation
-  const handleCanvasClick = e => {
-    const canvas = canvasRef.current;
-    const img = imageRef.current;
-    const rect = canvas.getBoundingClientRect();
-
-    // Calculate actual scale based on the current canvas size
-    const scaleX = img.naturalWidth / canvas.width;
-    const scaleY = img.naturalHeight / canvas.height;
-
-    // Calculate mouse position with proper scaling
-    const canvasX = e.clientX - rect.left;
-    const canvasY = e.clientY - rect.top;
-
-    // Convert to original image coordinates
-    const x = canvasX * scaleX;
-    const y = canvasY * scaleY;
-
-    if (currentTool === "marker") {
-      // Add point to current polygon (no auto-completion)
-      setCurrentPolygon(prev => [...prev, { x, y }]);
-    } else if (currentTool === "selector") {
-      if (isDraggingPoint) {
-        setIsDraggingPoint(false);
-        return;
+  // Add panning functions
+  const startPan = (e) => {
+    // Only start panning when using left mouse button AND either in pan tool OR holding Alt key
+    if (e.buttons === 1 && (currentTool === 'pan' || e.altKey)) {
+      setIsPanning(true);
+      setPanStart({ 
+        x: e.clientX, 
+        y: e.clientY 
+      });
+      // Change cursor to indicate active panning
+      if (canvasRef.current) {
+        canvasRef.current.style.cursor = 'grabbing';
       }
+      e.preventDefault();
+    }
+  };
 
-      const tolerance = 10;
-      const currentPolygons = polygons[selectedFile] || [];
-
-      // First check if we're clicking on a point
-      let pointFound = false;
-
-      // Check each polygon for the closest point within tolerance
-      for (let polyIndex = 0; polyIndex < currentPolygons.length; polyIndex++) {
-        const polygon = currentPolygons[polyIndex];
-        const { index: closestPointIndex, distance } = findClosestPoint(
-          polygon.points,
-          x,
-          y
+  const doPan = (e) => {
+    // Only pan if actively panning (mouse button pressed down)
+    if (isPanning && e.buttons === 1) {
+      const deltaX = e.clientX - panStart.x;
+      const deltaY = e.clientY - panStart.y;
+      
+      setPanOffset(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY
+      }));
+      
+      setPanStart({ 
+        x: e.clientX, 
+        y: e.clientY 
+      });
+      
+      // Redraw the canvas with the new pan offset
+      if (canvasRef.current && imageRef.current) {
+        redrawCanvas(
+          selectedFile, 
+          canvasRef.current, 
+          imageRef.current, 
+          polygons, 
+          currentPolygon, 
+          selectedPolygon, 
+          displayMode, 
+          pointRadius, 
+          zoomLevel,
+          { x: panOffset.x + deltaX, y: panOffset.y + deltaY }
         );
-
-        if (closestPointIndex !== -1 && distance < tolerance) {
-          // Set both the point index and the selected polygon
-          setSelectedPointIndex({ polyIndex, pointIndex: closestPointIndex });
-          setSelectedPolygon(polygon);
-          setIsDraggingPoint(true);
-          pointFound = true;
-          break;
-        }
       }
+    } else if (e.buttons !== 1) {
+      // If mouse button is released but isPanning hasn't been updated
+      endPan();
+    }
+  };
 
-      // If no point was clicked, check if we're clicking on an edge
-      if (!pointFound) {
-        // Check if clicking inside a polygon to select it
-        for (
-          let polyIndex = 0;
-          polyIndex < currentPolygons.length;
-          polyIndex++
-        ) {
-          if (isPointInPolygon(x, y, currentPolygons[polyIndex].points)) {
-            // Select this polygon
-            setSelectedPolygon(currentPolygons[polyIndex]);
-            handlePolygonSelection(currentPolygons[polyIndex]);
-            return;
-          }
-        }
-
-        // Then check for edges
-        for (
-          let polyIndex = 0;
-          polyIndex < currentPolygons.length;
-          polyIndex++
-        ) {
-          const edgeInfo = isPointNearEdge(
-            x,
-            y,
-            currentPolygons[polyIndex].points,
-            tolerance
-          );
-
-          if (edgeInfo) {
-            // Select this polygon first
-            setSelectedPolygon(currentPolygons[polyIndex]);
-
-            // Add a new point on the edge
-            const newPoint = edgeInfo.point;
-            const newPoints = [...currentPolygons[polyIndex].points];
-            newPoints.splice(edgeInfo.edgeIndex + 1, 0, newPoint);
-
-            const updatedPolygons = [...currentPolygons];
-            updatedPolygons[polyIndex] = {
-              ...updatedPolygons[polyIndex],
-              points: newPoints,
-            };
-
-            const newPolygons = {
-              ...polygons,
-              [selectedFile]: updatedPolygons,
-            };
-
-            setPolygons(newPolygons);
-            onUpdatePolygons(newPolygons);
-
-            // Select the new point for dragging
-            setSelectedPointIndex({
-              polyIndex,
-              pointIndex: edgeInfo.edgeIndex + 1,
-            });
-            setIsDraggingPoint(true);
-            break;
-          }
-        }
-      }
-    } else if (currentTool === "move") {
-      // If we're already dragging a polygon, drop it on click
-      if (isDraggingPolygon && hoveredPolygonIndex !== null) {
-        setIsDraggingPolygon(false);
-        setHoveredPolygonIndex(null);
-        return;
-      }
-
-      // Otherwise check if we're clicking inside a polygon to start dragging
-      const currentPolygons = polygons[selectedFile] || [];
-      for (let polyIndex = 0; polyIndex < currentPolygons.length; polyIndex++) {
-        if (isPointInPolygon(x, y, currentPolygons[polyIndex].points)) {
-          setSelectedPointIndex(null);
-          setIsDraggingPolygon(true);
-          setDragStartPos({ x, y });
-          setHoveredPolygonIndex(polyIndex);
-          return;
-        }
-      }
-    } else if (currentTool === "eraser") {
-      const tolerance = 15 * (img.width / canvas.width);
-      // First check if we need to erase points from the current polygon being drawn
-      if (currentPolygon.length > 0) {
-        // Find the closest point in the current polygon
-        const { index: closestPointIndex, distance } = findClosestPoint(
-          currentPolygon,
-          x,
-          y
-        );
-
-        if (closestPointIndex !== -1 && distance <= tolerance) {
-          // Remove only this single closest point
-          const updatedCurrentPolygon = [...currentPolygon];
-          updatedCurrentPolygon.splice(closestPointIndex, 1);
-          setCurrentPolygon(updatedCurrentPolygon);
-          redrawCanvas(selectedFile);
-          return;
-        }
-      }
-
-      // Check if we're erasing a point from an existing polygon
-      const currentFilePolygons = polygons[selectedFile] || [];
-
-      // Create a copy of the polygons array to modify
-      const updatedPolygons = [...currentFilePolygons];
-
-      // Find the polygon and point closest to the click
-      let closestPolygonIndex = -1;
-      let closestPointIndex = -1;
-      let closestDistance = Infinity;
-
-      // Check each polygon for points to erase
-      for (let polyIndex = 0; polyIndex < updatedPolygons.length; polyIndex++) {
-        const polygon = updatedPolygons[polyIndex];
-        const { index, distance } = findClosestPoint(polygon.points, x, y);
-
-        if (
-          index !== -1 &&
-          distance < closestDistance &&
-          distance <= tolerance
-        ) {
-          closestDistance = distance;
-          closestPolygonIndex = polyIndex;
-          closestPointIndex = index;
-        }
-      }
-
-      // If we found a close point, remove it
-      if (closestPolygonIndex !== -1 && closestPointIndex !== -1) {
-        const polygon = updatedPolygons[closestPolygonIndex];
-
-        // Only remove the point if there would be at least 3 points left
-        if (polygon.points.length > 3) {
-          // Create a copy of the points array and remove the point
-          const updatedPoints = [...polygon.points];
-          updatedPoints.splice(closestPointIndex, 1);
-
-          // Update the polygon with the new points
-          updatedPolygons[closestPolygonIndex] = {
-            ...polygon,
-            points: updatedPoints,
-          };
-
-          // Update the polygons state
-          const newPolygons = {
-            ...polygons,
-            [selectedFile]: updatedPolygons,
-          };
-
-          setPolygons(newPolygons);
-          onUpdatePolygons(newPolygons);
-          redrawCanvas(selectedFile);
-        } else {
-          console.warn(
-            "Cannot remove point: polygon must have at least 3 points"
-          );
-        }
+  const endPan = () => {
+    if (!isPanning) return;
+    
+    setIsPanning(false);
+    // Restore cursor based on current tool
+    if (canvasRef.current) {
+      if (currentTool === 'pan') {
+        canvasRef.current.style.cursor = 'grab';
+      } else {
+        canvasRef.current.style.cursor = '';
       }
     }
   };
 
-  // Update mouse move handler with the same coordinate transformation
+  // Update mouse move handler with proper pan handling
   const handleMouseMove = (e) => {
     const canvas = canvasRef.current;
     const img = imageRef.current;
     if (!canvas || !img || !selectedFile) return;
     
     const rect = canvas.getBoundingClientRect();
-
+    
+    // Set cursor for pan tool but don't activate panning just by hovering
+    if (currentTool === 'pan' && !isPanning) {
+      canvas.style.cursor = 'grab';
+    }
+    
+    // Only handle panning if we're already in panning mode (activated by mousedown)
+    if (isPanning) {
+      doPan(e);
+      return;
+    }
+    
     // Calculate scale based on canvas and image dimensions
     const scaleX = img.naturalWidth / canvas.width;
     const scaleY = img.naturalHeight / canvas.height;
 
-    // Get the center of the canvas
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-
-    // Calculate mouse position in canvas coordinates
+    // Get mouse position in canvas coordinates
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Calculate position relative to center with zoom correction
-    const relativeX = (mouseX - centerX) / zoomLevel + centerX;
-    const relativeY = (mouseY - centerY) / zoomLevel + centerY;
+    // Calculate position with zoom and pan offsets
+    const transformedX = (mouseX - panOffset.x) / zoomLevel;
+    const transformedY = (mouseY - panOffset.y) / zoomLevel;
 
     // Convert to original image coordinates
-    const x = relativeX * scaleX;
-    const y = relativeY * scaleY;
+    const x = transformedX * scaleX;
+    const y = transformedY * scaleY;
 
     // Handle point dragging
     if (isDraggingPoint && selectedPointIndex && selectedFile) {
@@ -637,6 +502,11 @@ const Preview = ({
   };
 
   const handleMouseUp = () => {
+    // End panning if active
+    if (isPanning) {
+      endPan();
+    }
+    
     // Handle point dragging completion
     if (isDraggingPoint) {
       setIsDraggingPoint(false);
@@ -650,6 +520,285 @@ const Preview = ({
       // Ensure we update the parent component with the final polygon positions
       onUpdatePolygons(polygons);
       console.log("Move completed - updated polygon positions");
+    }
+  };
+
+  // Handle canvas events with proper zoom coordinate transformation
+  const handleCanvasClick = (e) => {
+    // If we're in panning mode, don't handle clicks
+    if (isPanning) return;
+    
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img) return;
+    
+    const rect = canvas.getBoundingClientRect();
+
+    // Calculate scale based on canvas and image dimensions
+    const scaleX = img.naturalWidth / canvas.width;
+    const scaleY = img.naturalHeight / canvas.height;
+
+    // Get mouse position in canvas coordinates
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Apply inverse transformations for zoom and pan
+    const transformedX = (mouseX - panOffset.x) / zoomLevel;
+    const transformedY = (mouseY - panOffset.y) / zoomLevel;
+
+    // Convert to original image coordinates
+    const x = transformedX * scaleX;
+    const y = transformedY * scaleY;
+
+    if (currentTool === "marker") {
+      // Add point to current polygon (no auto-completion)
+      setCurrentPolygon(prev => [...prev, { x, y }]);
+      
+      // Force immediate redraw to show the new point
+      setTimeout(() => {
+        if (canvasRef.current && imageRef.current) {
+          redrawCanvas(
+            selectedFile, 
+            canvasRef.current, 
+            imageRef.current, 
+            polygons, 
+            [...currentPolygon, { x, y }], 
+            selectedPolygon, 
+            displayMode, 
+            pointRadius, 
+            zoomLevel,
+            panOffset
+          );
+        }
+      }, 10);
+    } 
+    else if (currentTool === "selector") {
+      if (isDraggingPoint) {
+        setIsDraggingPoint(false);
+        return;
+      }
+
+      const tolerance = 10;
+      const currentPolygons = polygons[selectedFile] || [];
+
+      // First check if we're clicking on a point
+      let pointFound = false;
+
+      // Check each polygon for the closest point within tolerance
+      for (let polyIndex = 0; polyIndex < currentPolygons.length; polyIndex++) {
+        const polygon = currentPolygons[polyIndex];
+        if (!polygon || !polygon.points) continue;
+        
+        const { index: closestPointIndex, distance } = findClosestPoint(
+          polygon.points,
+          x,
+          y
+        );
+
+        if (closestPointIndex !== -1 && distance < tolerance) {
+          // Set both the point index and the selected polygon
+          setSelectedPointIndex({ polyIndex, pointIndex: closestPointIndex });
+          setSelectedPolygon(polygon);
+          setIsDraggingPoint(true);
+          pointFound = true;
+          break;
+        }
+      }
+
+      // If no point was clicked, check if we're clicking on an edge
+      if (!pointFound) {
+        // Check if clicking inside a polygon to select it
+        for (let polyIndex = 0; polyIndex < currentPolygons.length; polyIndex++) {
+          if (!currentPolygons[polyIndex] || !currentPolygons[polyIndex].points) continue;
+          
+          if (isPointInPolygon(x, y, currentPolygons[polyIndex].points)) {
+            // Select this polygon
+            setSelectedPolygon(currentPolygons[polyIndex]);
+            if (typeof onPolygonSelection === 'function') {
+              onPolygonSelection(currentPolygons[polyIndex]);
+            }
+            return;
+          }
+        }
+
+        // Then check for edges
+        for (let polyIndex = 0; polyIndex < currentPolygons.length; polyIndex++) {
+          if (!currentPolygons[polyIndex] || !currentPolygons[polyIndex].points) continue;
+          
+          const edgeInfo = isPointNearEdge(
+            x,
+            y,
+            currentPolygons[polyIndex].points,
+            tolerance
+          );
+
+          if (edgeInfo) {
+            // Select this polygon first
+            setSelectedPolygon(currentPolygons[polyIndex]);
+
+            // Add a new point on the edge
+            const newPoint = edgeInfo.point;
+            const newPoints = [...currentPolygons[polyIndex].points];
+            newPoints.splice(edgeInfo.edgeIndex + 1, 0, newPoint);
+
+            const updatedPolygons = [...currentPolygons];
+            updatedPolygons[polyIndex] = {
+              ...updatedPolygons[polyIndex],
+              points: newPoints,
+            };
+
+            const newPolygons = {
+              ...polygons,
+              [selectedFile]: updatedPolygons,
+            };
+
+            setPolygons(newPolygons);
+            onUpdatePolygons(newPolygons);
+
+            // Select the new point for dragging
+            setSelectedPointIndex({
+              polyIndex,
+              pointIndex: edgeInfo.edgeIndex + 1,
+            });
+            setIsDraggingPoint(true);
+            break;
+          }
+        }
+      }
+    } 
+    else if (currentTool === "move") {
+      // If we're already dragging a polygon, drop it on click
+      if (isDraggingPolygon && hoveredPolygonIndex !== null) {
+        setIsDraggingPolygon(false);
+        setHoveredPolygonIndex(null);
+        return;
+      }
+
+      // Otherwise check if we're clicking inside a polygon to start dragging
+      const currentPolygons = polygons[selectedFile] || [];
+      for (let polyIndex = 0; polyIndex < currentPolygons.length; polyIndex++) {
+        if (!currentPolygons[polyIndex] || !currentPolygons[polyIndex].points) continue;
+        
+        if (isPointInPolygon(x, y, currentPolygons[polyIndex].points)) {
+          setSelectedPointIndex(null);
+          setIsDraggingPolygon(true);
+          setDragStartPos({ x, y });
+          setHoveredPolygonIndex(polyIndex);
+          return;
+        }
+      }
+    } 
+    else if (currentTool === "eraser") {
+      const tolerance = 15 * (img.naturalWidth / canvas.width);
+      
+      // First check if we need to erase points from the current polygon being drawn
+      if (currentPolygon.length > 0) {
+        // Find the closest point in the current polygon
+        const { index: closestPointIndex, distance } = findClosestPoint(
+          currentPolygon,
+          x,
+          y
+        );
+
+        if (closestPointIndex !== -1 && distance <= tolerance) {
+          // Remove only this single closest point
+          const updatedCurrentPolygon = [...currentPolygon];
+          updatedCurrentPolygon.splice(closestPointIndex, 1);
+          setCurrentPolygon(updatedCurrentPolygon);
+          
+          // Force immediate redraw
+          setTimeout(() => {
+            if (canvasRef.current && imageRef.current) {
+              redrawCanvas(
+                selectedFile, 
+                canvasRef.current, 
+                imageRef.current, 
+                polygons, 
+                updatedCurrentPolygon, 
+                selectedPolygon, 
+                displayMode, 
+                pointRadius, 
+                zoomLevel,
+                panOffset
+              );
+            }
+          }, 10);
+          return;
+        }
+      }
+
+      // Check if we're erasing a point from an existing polygon
+      const currentFilePolygons = polygons[selectedFile] || [];
+      if (currentFilePolygons.length === 0) return;
+
+      // Create a copy of the polygons array to modify
+      const updatedPolygons = [...currentFilePolygons];
+
+      // Find the polygon and point closest to the click
+      let closestPolygonIndex = -1;
+      let closestPointIndex = -1;
+      let closestDistance = Infinity;
+
+      // Check each polygon for points to erase
+      for (let polyIndex = 0; polyIndex < updatedPolygons.length; polyIndex++) {
+        const polygon = updatedPolygons[polyIndex];
+        if (!polygon || !polygon.points) continue;
+        
+        const { index, distance } = findClosestPoint(polygon.points, x, y);
+
+        if (index !== -1 && distance < closestDistance && distance <= tolerance) {
+          closestDistance = distance;
+          closestPolygonIndex = polyIndex;
+          closestPointIndex = index;
+        }
+      }
+
+      // If we found a close point, remove it
+      if (closestPolygonIndex !== -1 && closestPointIndex !== -1) {
+        const polygon = updatedPolygons[closestPolygonIndex];
+
+        // Only remove the point if there would be at least 3 points left
+        if (polygon.points.length > 3) {
+          // Create a copy of the points array and remove the point
+          const updatedPoints = [...polygon.points];
+          updatedPoints.splice(closestPointIndex, 1);
+
+          // Update the polygon with the new points
+          updatedPolygons[closestPolygonIndex] = {
+            ...polygon,
+            points: updatedPoints,
+          };
+
+          // Update the polygons state
+          const newPolygons = {
+            ...polygons,
+            [selectedFile]: updatedPolygons,
+          };
+
+          setPolygons(newPolygons);
+          onUpdatePolygons(newPolygons);
+          
+          // Force immediate redraw
+          setTimeout(() => {
+            if (canvasRef.current && imageRef.current) {
+              redrawCanvas(
+                selectedFile, 
+                canvasRef.current, 
+                imageRef.current, 
+                newPolygons, 
+                currentPolygon, 
+                selectedPolygon, 
+                displayMode, 
+                pointRadius, 
+                zoomLevel,
+                panOffset
+              );
+            }
+          }, 10);
+        } else {
+          console.warn("Cannot remove point: polygon must have at least 3 points");
+        }
+      }
     }
   };
 
@@ -698,9 +847,16 @@ const Preview = ({
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+              onMouseDown={startPan}
               className="max-w-full max-h-full border-4 border-gray-400 rounded-lg shadow-md"
               style={{ objectFit: "contain" }}
             />
+            
+            {/* Add pan indicators */}
+            {/* <div className="absolute bottom-2 left-2 bg-white p-2 rounded-md shadow-md text-xs">
+              <div>Pan: Alt + Click and drag</div>
+              {isPanning && <div className="text-green-600 font-bold">Panning active</div>}
+            </div> */}
             
             {/* Zoom Controls */}
             <div className="absolute top-2 right-2 bg-white p-2 rounded-md shadow-md flex space-x-2">
