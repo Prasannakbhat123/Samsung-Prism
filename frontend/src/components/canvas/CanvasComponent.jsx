@@ -26,12 +26,14 @@ const CanvasComponent = ({
   setIsDraggingPolygon,
   hoveredPolygonIndex,
   isDraggingPoint,
+  isDraggingPolygon,
   selectedPointIndex,
   dragStartPos,
   setDragStartPos,
   setHoveredPolygonIndex,
   setCurrentPolygon,
   onUpdatePolygons,
+  setPolygons,
   setSelectedPolygon,
   onPolygonSelection,
   startPan,
@@ -157,7 +159,10 @@ const CanvasComponent = ({
       setHoveredPolygonIndex,
       isDraggingPoint,
       selectedFile,
-      redrawCanvas
+      redrawCanvas,
+      polygons,
+      onUpdatePolygons,
+      hoveredPolygonIndex
     );
   };
 

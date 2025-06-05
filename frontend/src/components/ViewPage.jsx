@@ -5,6 +5,7 @@ import Preview from "./Preview";
 import PolygonList from "./PolygonList";
 import logo from "../assets/IGlogo.png";
 import JsonStorageService from "../services/JsonStorageService";
+import blobMapper from '../utils/BlobMapper';
 
 const ViewPage = ({ uploadedFiles, setViewMode }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -54,17 +55,29 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
     if (filePath) {
       fileName = filePath.split("/").pop();
       console.log(`Setting file name for ${fileUrl}: ${fileName}`);
-      setFileNames(prev => ({
-        ...prev,
-        [fileUrl]: fileName,
-      }));
+      
+      // Update fileNames state
+      setFileNames(prev => {
+        const newFileNames = {
+          ...prev,
+          [fileUrl]: fileName,
+        };
+        
+        // IMPORTANT: Share this mapping with window for BlobMapper to access
+        window.fileNames = newFileNames;
+        
+        // Add to BlobMapper directly
+        blobMapper.mapFile(fileUrl, fileName);
+        
+        return newFileNames;
+      });
     }
 
     // Initialize polygons for this file if not already done
     if (!polygons[fileUrl]) {
       setPolygons(prev => ({
         ...prev,
-        [fileUrl]: [],
+        [fileUrl]: [],  // Explicitly initialize as an empty array
       }));
     }
 
@@ -127,7 +140,22 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
 
     // IMPORTANT: Reset selectedPolygons to only show polygons for the current file
     // This code now runs after loading saved polygons
-    const currentFilePolygons = (polygons[fileUrl] || []).map(p => ({
+    const filePolygonsData = polygons[fileUrl] || [];
+    
+    // Ensure we're working with an array
+    if (!Array.isArray(filePolygonsData)) {
+      console.warn(`Expected array for polygons[${fileUrl}] but got:`, filePolygonsData);
+      // Initialize as empty array if not an array
+      setPolygons(prev => ({
+        ...prev,
+        [fileUrl]: []
+      }));
+      setSelectedPolygons([]);
+      setAllPolygons([]);
+      return;
+    }
+    
+    const currentFilePolygons = filePolygonsData.map(p => ({
       ...p,
       fileUrl: fileUrl, // Ensure correct fileUrl
     }));
@@ -148,6 +176,24 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
     }));
   };
 
+  // Add a helper function to ensure we're always working with arrays
+  const ensureArray = (value) => {
+    if (Array.isArray(value)) return value;
+    console.warn("Expected an array but got:", value);
+    return [];
+  };
+
+  // Helper function to ensure we always have an array of polygons
+  const ensurePolygonArray = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    // If it's a single polygon object, wrap it in an array
+    if (typeof data === 'object' && data.points) return [data];
+    console.warn("Unknown polygon data format:", data);
+    return [];
+  };
+
+  // Update handleUpdatePolygons to use the helper
   const handleUpdatePolygons = updatedPolygons => {
     console.log("Updating polygons:", Object.keys(updatedPolygons));
 
@@ -155,7 +201,8 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
     const validatedUpdate = {};
 
     Object.entries(updatedPolygons).forEach(([fileUrl, filePolygons]) => {
-      validatedUpdate[fileUrl] = filePolygons.map(poly => {
+      // Use the helper to ensure we have an array
+      validatedUpdate[fileUrl] = ensurePolygonArray(filePolygons).map(poly => {
         // FIX: Ensure fileUrl is set consistently
         const polygonWithFileUrl = {
           ...poly,
@@ -177,8 +224,13 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
 
       // This will ensure selectedPolygons gets updated immediately rather than waiting for useEffect
       const allPolygonsList = Object.entries(newPolygons).flatMap(
-        ([fileUrl, polys]) =>
-          polys.map(p => ({ ...p, fileUrl: p.fileUrl || fileUrl }))
+        ([fileUrl, polys]) => {
+          // Ensure polys is an array before mapping
+          return ensurePolygonArray(polys).map(p => ({ 
+            ...p, 
+            fileUrl: p.fileUrl || fileUrl 
+          }));
+        }
       );
 
       setSelectedPolygons(allPolygonsList);
@@ -254,10 +306,16 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
     setSelectedPolygon(normalizedPolygon);
   };
 
+  // Fix this useEffect that's causing the error
   useEffect(() => {
     if (selectedFile) {
-      const currentPolygons = polygons[selectedFile?.url] || [];
-      const processedPolygons = currentPolygons.map(polygon => ({
+      // Ensure polygons[selectedFile?.url] is an array before calling map
+      const filePolygons = polygons[selectedFile?.url];
+      
+      // Use our helper function
+      const safePolygons = ensurePolygonArray(filePolygons);
+      
+      const processedPolygons = safePolygons.map(polygon => ({
         name: polygon.name,
         group: polygon.group,
         points: polygon.points.map(point => [point.x, point.y]),
@@ -289,93 +347,108 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
     return uniquePolygons;
   };
 
-  useEffect(() => {
-    const newAllPolygons = Object.entries(polygons).flatMap(
-      ([fileUrl, filePolygons]) =>
-        filePolygons.map(polygon => ({ ...polygon, fileUrl }))
-    );
-    setAllPolygons(newAllPolygons);
-  }, [polygons]);
+  // REMOVE THESE DUPLICATE useEffect HOOKS - They're causing conflicts
+  // Delete the following useEffect hook that starts at around line 339
+  // useEffect(() => {
+  //   const newAllPolygons = Object.entries(polygons).flatMap(
+  //     ([fileUrl, filePolygons]) =>
+  //       filePolygons.map(polygon => ({ ...polygon, fileUrl }))
+  //   );
+  //   setAllPolygons(newAllPolygons);
+  // }, [polygons]);
 
-  // Fix the useEffect that updates the allPolygons array
+  // Only keep the consolidated useEffect hook that handles polygon arrays safely
   useEffect(() => {
-    // Update allPolygons whenever polygons change, ensuring fileUrl is set
-    const newAllPolygons = Object.entries(polygons).flatMap(
-      ([fileUrl, filePolygons]) =>
-        filePolygons.map(polygon => {
-          // Ensure consistency by using the file's exact URL
-          return {
+    // This single useEffect will handle updating allPolygons whenever polygons change
+    console.log("Running consolidated polygon effect");
+    
+    try {
+      // Create a fresh array from all polygons with safe array checks
+      const allPolygonList = Object.entries(polygons).flatMap(
+        ([fileUrl, filePolygons]) => {
+          // Always ensure we have an array before mapping
+          if (!filePolygons) return [];
+          if (!Array.isArray(filePolygons)) {
+            console.warn(`Found non-array value for ${fileUrl}:`, filePolygons);
+            // If it's a single polygon object with points, wrap it in an array
+            if (typeof filePolygons === 'object' && filePolygons.points) {
+              return [{...filePolygons, fileUrl: filePolygons.fileUrl || fileUrl}];
+            }
+            return [];
+          }
+          
+          // Map each polygon to ensure it has the correct fileUrl
+          return filePolygons.map(polygon => ({
             ...polygon,
-            fileUrl: fileUrl, // Use the exact fileUrl string
-          };
-        })
-    );
-
-    console.log(
-      `Updated allPolygons array: ${newAllPolygons.length} polygons total`
-    );
-
-    setAllPolygons(newAllPolygons);
+            fileUrl: polygon.fileUrl || fileUrl
+          }));
+        }
+      );
+      
+      console.log(`Updated polygon arrays: ${allPolygonList.length} polygons total`);
+      
+      // Update both state variables in one go to avoid race conditions
+      setAllPolygons(allPolygonList);
+      setSelectedPolygons(allPolygonList);
+    } catch (error) {
+      console.error("Error in polygon processing:", error);
+      // In case of error, set to empty arrays to avoid crashes
+      setAllPolygons([]);
+      setSelectedPolygons([]);
+    }
   }, [polygons]);
 
-  useEffect(() => {
-    // Update allPolygons and selectedPolygons whenever polygons change
-    const newAllPolygons = Object.entries(polygons).flatMap(
-      ([fileUrl, filePolygons]) =>
-        filePolygons.map(polygon => {
-          const updatedPolygon = {
-            ...polygon,
-            fileUrl: polygon.fileUrl || fileUrl,
-          };
-          return updatedPolygon;
-        })
-    );
-
-    console.log(
-      `Updated polygon arrays: ${newAllPolygons.length} polygons total`
-    );
-
-    setAllPolygons(newAllPolygons);
-    setSelectedPolygons(newAllPolygons); // Ensure both arrays have the same data
-  }, [polygons]);
-
-  // Update the useEffect that handles allPolygons to ensure strict fileUrl
+  // Keep the file-specific useEffect but update it to use ensurePolygonArray
   useEffect(() => {
     if (!selectedFile) return;
+    
+    try {
+      // Get the specific file's polygons
+      const fileUrl = selectedFile.url;
+      const filePolygons = polygons[fileUrl];
+      
+      // Always ensure we have an array
+      const safePolygons = ensurePolygonArray(filePolygons);
+      
+      // Add the fileUrl to each polygon
+      const currentFilePolygons = safePolygons.map(poly => ({
+        ...poly,
+        fileUrl
+      }));
+      
+      console.log(`File-specific effect: Found ${currentFilePolygons.length} polygons for ${fileUrl}`);
+    } catch (error) {
+      console.error("Error in file-specific polygon effect:", error);
+    }
+  }, [selectedFile, polygons]);
 
-    // This fixes inconsistencies by ensuring only polygons for current file are processed
-    const fileUrl = selectedFile.url;
-
-    // Get polygons for the current file only
-    const currentFilePolygons = (polygons[fileUrl] || []).map(poly => ({
-      ...poly,
-      fileUrl: fileUrl, // Enforce the exact fileUrl string
-    }));
-
-    // Set these as selectedPolygons when the file changes
-    setSelectedPolygons(prevPolygons => {
-      // Remove any polygons with this fileUrl (to avoid duplicates)
-      const otherFilePolygons = prevPolygons.filter(p => p.fileUrl !== fileUrl);
-
-      // Add the current file polygons
-      return [...otherFilePolygons, ...currentFilePolygons];
+  // When you create blob URLs for files, update BlobMapper
+  const createBlobURLs = (files) => {
+    const fileArray = Array.from(files);
+    const urlMapping = {};
+    
+    const filesWithUrls = fileArray.map(file => {
+      const url = URL.createObjectURL(file);
+      urlMapping[url] = file.name;
+      return { file, url, name: file.name };
     });
+    
+    // Update BlobMapper with these new mappings
+    blobMapper.mapFiles(urlMapping);
+    
+    return filesWithUrls;
+  };
 
-    console.log(
-      `Updated selectedPolygons for file "${fileUrl}" with ${currentFilePolygons.length} polygons`
-    );
-  }, [selectedFile?.url]);
-
-  // Enhanced auto-save effect with more strict filtering
+  // Enhanced auto-save effect with more strict filtering and array checking
   useEffect(() => {
     const saveTimeout = setTimeout(() => {
       if (selectedFile?.url && fileNames[selectedFile.url]) {
         const fileUrl = selectedFile.url;
 
         // Get only polygons that belong to this exact file with strict equality
-        const imagePolygons = (polygons[fileUrl] || []).filter(
-          p => p.fileUrl === fileUrl
-        );
+        // Use ensurePolygonArray to guarantee it's an array
+        const imagePolygons = ensurePolygonArray(polygons[fileUrl] || [])
+          .filter(p => p.fileUrl === fileUrl);
 
         const fileName = fileNames[fileUrl];
 

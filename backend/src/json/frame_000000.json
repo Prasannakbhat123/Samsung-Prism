@@ -5,28 +5,32 @@
       "className": "1",
       "instances": [
         {
-          "instanceId": "Rectangle-1",
-          "name": "Rectangle",
+          "instanceId": "Circle-1",
+          "name": "Circle",
           "coordinates": [
             [
-              61,
-              51
+              509,
+              144
             ],
             [
-              160,
-              46
+              603,
+              148
             ],
             [
-              223,
-              166
+              522,
+              238
             ],
             [
-              142,
-              193
+              585,
+              401
             ],
             [
-              51,
-              158
+              689,
+              368
+            ],
+            [
+              707,
+              267
             ]
           ]
         }

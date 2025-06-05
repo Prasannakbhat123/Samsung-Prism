@@ -1,5 +1,5 @@
 import React from "react";
-import { PenTool, Eraser, MousePointer, Move } from "lucide-react"; // Import Move icon
+import { PenTool, Eraser, MousePointer, Move, Hand } from "lucide-react"; // Add Hand icon for pan
 
 const Tools = ({ 
   currentTool, 
@@ -25,6 +25,11 @@ const Tools = ({
       icon: Move, 
       name: 'move',
       tooltip: 'Move Polygon'
+    },
+    { 
+      icon: Hand, 
+      name: 'pan',
+      tooltip: 'Pan Image (Alt+Click)'
     }
   ];
 
