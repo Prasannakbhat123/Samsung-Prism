@@ -8,20 +8,32 @@ const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFra
     if (isFirstFrame || isProcessing || !currentFrame) return;
 
     try {
+      console.log(`Running model for frame number: ${currentFrame}`);
       setIsProcessing(true);
+      
       // Call backend to run model for current frame
       const response = await fetch('http://localhost:3000/api/model/run-single-frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frameNumber: 1}) // change later 
+        body: JSON.stringify({ frameNumber: parseInt(currentFrame, 10) })
       });
-      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to run model');
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
       }
+      
+      const data = await response.json();
+      console.log('Model response:', data);
+      
+      if (!data.success) {
+        throw new Error(data.error || data.message || 'Model processing failed');
+      }
+      
       // Refetch the JSON for the current image
       const fileName = selectedFile ? selectedFile.split('/').pop() : null;
       if (fileName) {
+        console.log(`Fetching updated polygon data for file: ${fileName}`);
         const jsonData = await JsonStorageService.fetchPolygonData(fileName);
         if (jsonData) {
           const newPolygons = JsonStorageService.convertJsonToPolygons(jsonData, selectedFile);
@@ -32,6 +44,7 @@ const ActionButtons = ({ joinPolygon, onExportPolygons, currentFrame, isFirstFra
       }
       alert('Model run successful and polygons updated!');
     } catch (error) {
+      console.error('Error running model:', error);
       alert(`Failed to run model: ${error.message}`);
     } finally {
       setIsProcessing(false);
