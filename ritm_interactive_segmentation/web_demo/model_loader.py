@@ -7,11 +7,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import Optional, Dict, Any
-import os
-import sys
-
-# Add parent directory to Python path for isegm module
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class DummyModel(nn.Module):
@@ -243,13 +238,9 @@ def get_model_config() -> Dict[str, Any]:
     Get model configuration for the web demo.
     Modify this function to load your specific model.
     """
-    # Get the current directory (web_demo) and construct relative path to weights
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    weights_path = os.path.join(os.path.dirname(current_dir), 'weights', 'hrnet18_cocolvis_itermask_3p.pth')
-    
     config = {
         'model_type': 'pytorch',  # 'pytorch', 'onnx', or 'dummy'
-        'model_path': weights_path,  # Updated to use relative path
+        'model_path': '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/ritm_interactive_segmentation/weights/hrnet18_cocolvis_itermask_3p.pth',  # Path to your model file
         'device': 'cpu',        # 'cpu' or 'cuda'
         'model_class': None,    # Will use the original model loading function
         'model_kwargs': {}      # Additional arguments for model constructor

@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file
+from flask_cors import CORS
 import cv2
 import numpy as np
 import base64
@@ -7,9 +8,9 @@ from PIL import Image
 import os
 import tempfile
 import json
+import sys
 
 # Add parent directory to Python path for isegm module
-import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the controller from the original demo
@@ -18,12 +19,24 @@ from interactive_demo.controller import InteractiveController
 # Import model loader
 from model_loader import load_model_from_config, get_model_config
 
+# Import mask_to_json
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../backend/src/scripts')))
+from mask_to_json import mask_to_json
+
+# Add import for local mask_to_json
+from mask_to_json import mask_to_json
+
+# Import generate_meta_json
+from generate_meta_json import generate_meta_json
+
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Global variables to store the current session state
 current_controller = None
 current_image = None
 session_data = {}
+current_filename = None  # Store the uploaded filename
 
 # Load model at startup
 print("Loading model...")
@@ -37,7 +50,7 @@ def index():
 
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
-    global current_controller, current_image, session_data
+    global current_controller, current_image, session_data, current_filename
     
     if 'image' not in request.files:
         return jsonify({'error': 'No image uploaded'}), 400
@@ -45,6 +58,8 @@ def upload_image():
     file = request.files['image']
     if file.filename == '':
         return jsonify({'error': 'No image selected'}), 400
+    
+    current_filename = os.path.splitext(file.filename)[0]  # Store base name without extension
     
     try:
         # Read and process the image
@@ -93,7 +108,7 @@ def upload_image():
 
 @app.route('/add_click', methods=['POST'])
 def add_click():
-    global current_controller
+    global current_controller, current_filename
     
     if current_controller is None:
         return jsonify({'error': 'No image loaded'}), 400
@@ -108,6 +123,23 @@ def add_click():
         
         # Get the visualization
         vis_image = current_controller.get_visualization(alpha_blend=0.5, click_radius=3)
+
+        # --- Save mask to 'masks/mask.png' after every click ---
+        mask = getattr(current_controller, 'result_mask', None)
+        if mask is not None and current_filename:
+            if mask.max() < 256:
+                mask = mask.astype(np.uint8)
+                mask *= 255 // mask.max() if mask.max() > 0 else 255
+            masks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'masks')
+            os.makedirs(masks_dir, exist_ok=True)
+            mask_path = os.path.join(masks_dir, f'{current_filename}.png')
+            cv2.imwrite(mask_path, mask)
+            try:
+                mask_to_json(mask_path, masks_dir)
+                generate_meta_json(masks_dir)  # Update meta.json after each mask/JSON update
+            except Exception as e:
+                print(f"Error creating JSON or meta for mask: {e}")
+        # --- End mask saving ---
         
         if vis_image is not None:
             # Convert to base64
