@@ -12,6 +12,7 @@ const ActionButtons = ({
   onUpdatePolygons, 
   onForceSave,
   onRitmModeChange, // Add this new prop
+  onUpdateMask, // <-- Add this prop for mask image update
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -160,6 +161,55 @@ const ActionButtons = ({
     }
   };
 
+  // --- RITM Backend Integration Handlers ---
+  const handleFinishObject = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/finish_object', { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        if (onUpdateMask && data.image) {
+          onUpdateMask(data.image);
+        }
+      } else {
+        setErrorMessage(data.error || 'Failed to finish object');
+      }
+    } catch (err) {
+      setErrorMessage('Error finishing object');
+    }
+  };
+
+  const handleUndoClick = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/undo_click', { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        if (onUpdateMask && data.image) {
+          onUpdateMask(data.image);
+        }
+      } else {
+        setErrorMessage(data.error || 'Failed to undo click');
+      }
+    } catch (err) {
+      setErrorMessage('Error undoing click');
+    }
+  };
+
+  const handleResetClicks = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/reset_clicks', { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        if (onUpdateMask && data.image) {
+          onUpdateMask(data.image);
+        }
+      } else {
+        setErrorMessage(data.error || 'Failed to reset clicks');
+      }
+    } catch (err) {
+      setErrorMessage('Error resetting clicks');
+    }
+  };
+
   return (
     <div className="w-full backdrop-blur-sm bg-black/20 border border-gray-700 rounded-2xl p-6 shadow-2xl">
       {/* RITM Mode Toggle */}
@@ -208,6 +258,7 @@ const ActionButtons = ({
             </h4>
             <div className="grid grid-cols-1 gap-3">
               <button
+                onClick={handleFinishObject}
                 className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-medium hover:from-green-500 hover:to-green-600 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,6 +268,7 @@ const ActionButtons = ({
               </button>
               
               <button
+                onClick={handleUndoClick}
                 className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-yellow-600 to-yellow-700 text-white rounded-xl font-medium hover:from-yellow-500 hover:to-yellow-600 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,6 +278,7 @@ const ActionButtons = ({
               </button>
               
               <button
+                onClick={handleResetClicks}
                 className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-medium hover:from-red-500 hover:to-red-600 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -297,7 +350,6 @@ const ActionButtons = ({
             </svg>
             <p className="font-medium">{errorMessage}</p>
           </div>
-          <p className="text-red-500 text-sm mt-1">Make sure the backend server is running at the correct address.</p>
         </div>
       )}
     </div>
