@@ -210,6 +210,18 @@ const ActionButtons = ({
     }
   };
 
+  const handleToggleRitmMode = async () => {
+    if (isRitmMode) {
+      // Switching from RITM to Manual, save the RITM JSON
+      try {
+        await fetch('http://localhost:5000/save_ritm_json', { method: 'POST' });
+      } catch (err) {
+        setErrorMessage('Failed to save RITM JSON');
+      }
+    }
+    setIsRitmMode(!isRitmMode);
+  };
+
   return (
     <div className="w-full backdrop-blur-sm bg-black/20 border border-gray-700 rounded-2xl p-6 shadow-2xl">
       {/* RITM Mode Toggle */}
@@ -226,7 +238,7 @@ const ActionButtons = ({
               Manual
             </span>
             <button
-              onClick={() => setIsRitmMode(!isRitmMode)}
+              onClick={handleToggleRitmMode}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
                 isRitmMode ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 'bg-gray-700'
               }`}

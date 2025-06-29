@@ -127,6 +127,22 @@ def add_click():
             buffer = io.BytesIO()
             pil_image.save(buffer, format='PNG')
             img_str = base64.b64encode(buffer.getvalue()).decode()
+            
+            # Save the current mask after each click
+            mask = current_controller.result_mask
+            if mask is not None:
+                mask_to_save = mask.copy()
+                if mask_to_save.max() < 256:
+                    mask_to_save = mask_to_save.astype(np.uint8)
+                    mask_to_save *= 255 // mask_to_save.max() if mask_to_save.max() > 0 else 255
+                # Save under mask-ritm/<imagename>.png
+                mask_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/mask-ritm'
+                if not os.path.exists(mask_dir):
+                    os.makedirs(mask_dir)
+                if current_filename:
+                    save_path = os.path.join(mask_dir, f'{current_filename}.png')
+                    cv2.imwrite(save_path, mask_to_save)
+            
             return jsonify({
                 'success': True,
                 'image': img_str,
@@ -314,6 +330,26 @@ def load_image_by_name():
         tb = traceback.format_exc()
         print(f"Error in /load_image_by_name: {e}\n{tb}")
         return jsonify({'error': str(e), 'trace': tb}), 500
+
+@app.route('/save_ritm_json', methods=['POST'])
+def save_ritm_json():
+    global current_controller, current_filename
+    if current_controller is None or current_filename is None:
+        return jsonify({'error': 'No image loaded'}), 400
+    try:
+        # Path to the latest mask
+        mask_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/mask-ritm'
+        mask_path = os.path.join(mask_dir, f'{current_filename}.png')
+        if not os.path.exists(mask_path):
+            return jsonify({'error': f'Mask not found for {current_filename}'}), 404
+        # Output JSON directory
+        json_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/json'
+        # Use the updated RITM-to-JSON logic (sequential class names)
+        from mask_to_json import mask_to_json as mask_to_json_fn
+        mask_to_json_fn(mask_path, json_dir)
+        return jsonify({'success': True, 'json_file': f'{current_filename}.json'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("Starting Interactive Segmentation Web Demo...")
