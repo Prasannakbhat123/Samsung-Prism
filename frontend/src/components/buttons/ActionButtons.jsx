@@ -120,10 +120,10 @@ const ActionButtons = ({
       if (onForceSave) {
         await onForceSave();
       }
-      const isConnected = await ModelService.testConnection();
-      if (!isConnected) {
-        throw new Error("Cannot connect to the backend server. Please make sure it's running.");
-      }
+      // const isConnected = await ModelService.testConnection();
+      // if (!isConnected) {
+      //   throw new Error("Cannot connect to the backend server. Please make sure it's running.");
+      // }
       // Get initial list of JSON files before running the model
       let initialFiles = [];
       try {

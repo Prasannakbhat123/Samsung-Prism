@@ -28,7 +28,7 @@ class ModelService {
       // More detailed error handling
       if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
         console.error(`Backend server connection failed at ${API_URL}. Is the server running?`);
-        throw new Error(`Cannot connect to the backend server at ${API_URL}. Please make sure the server is running.`);
+        // throw new Error(`Cannot connect to the backend server at ${API_URL}. Please make sure the server is running.`);
       }
       
       console.error('Error running model on single frame:', error);
