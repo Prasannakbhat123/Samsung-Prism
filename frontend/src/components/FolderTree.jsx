@@ -84,37 +84,39 @@ const FolderTree = ({ files, onFileSelect }) => {
         <div key={key} className="">
           {item.type === "folder" ? (
             <div
-              className="flex items-center space-x-2 text-lg text-[#2E3192] font-semibold mt-2 cursor-pointer hover:text-[#1b1c45] transition"
+              className="flex items-center space-x-2 text-gray-300 font-semibold mt-2 cursor-pointer hover:text-white transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800/50"
               onClick={() => toggleFolder(item.name)}
             >
               {openFolders[item.name] ? (
-                <ChevronDown className="w-4 h-4 text-[#2E3192]" />
+                <ChevronDown className="w-4 h-4 text-gray-400" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-[#2E3192]" />
+                <ChevronRight className="w-4 h-4 text-gray-400" />
               )}
               {openFolders[item.name] ? (
-                <FolderOpen className="w-5 h-5 text-[#2E3192] font-bold" />
+                <FolderOpen className="w-5 h-5 text-yellow-400" />
               ) : (
-                <Folder className="w-5 h-5 text-[#2E3192] font-bold" />
+                <Folder className="w-5 h-5 text-gray-400" />
               )}
-              <span>{item.name}</span>
+              <span className="truncate">{item.name}</span>
             </div>
           ) : (
             <div
-              className={`flex items-center space-x-2 cursor-pointer mt-1 p-2 transition ${
+              className={`flex items-center space-x-2 cursor-pointer mt-1 p-2 rounded-lg transition-all duration-200 ${
                 allFiles[currentFileIndex]?.url === item.url 
-                  ? "bg-[#2E3192] text-white font-bold rounded-md" 
-                  : "text-[#787bff] hover:bg-gray-200 hover:text-[#2E3192] rounded-md"
+                  ? "bg-gradient-to-r from-gray-700 to-gray-600 text-white shadow-lg border border-gray-500" 
+                  : "text-gray-400 hover:bg-gray-800/50 hover:text-white"
               }`}
               onClick={() => handleFileSelect(item.url, item.path)}
-              style={{ paddingLeft: `${level * 8}px` }} // Indentation for nested files
+              style={{ paddingLeft: `${level * 16}px` }} // Indentation for nested files
             >
-              <FileText className="w-4 h-4" />
-              <span>{item.name}</span>
+              <FileText className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate text-sm">{item.name}</span>
             </div>
           )}
           {item.type === "folder" && openFolders[item.name] && (
-            <div className="ml-6">{renderTree(item.contents, level + 1)}</div>
+            <div className="ml-4 border-l border-gray-700 pl-2">
+              {renderTree(item.contents, level + 1)}
+            </div>
           )}
         </div>
       );
@@ -122,43 +124,74 @@ const FolderTree = ({ files, onFileSelect }) => {
   };
 
   return (
-    <div className="w-1/4 bg-[#f0f0f0] text-black p-5 h-[90vh] overflow-y-auto shadow-lg border-r-2 border-[#d8d8d8]">
-      <h2 className="text-2xl font-bold mb-4 text-center flex items-center justify-center sticky top-0 bg-[#f0f0f0] py-2">
-        <Folder className="w-6 h-6 mr-2" /> Folder Tree
-      </h2>
-      
-      {/* Navigation buttons */}
-      <div className="flex justify-center space-x-4 mb-6">
-        <button 
-          onClick={handlePrevClick}
-          disabled={currentFileIndex <= 0}
-          className={`flex items-center px-3 py-1 rounded-md ${
-            currentFileIndex <= 0 
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-              : "bg-[#2E3192] text-white hover:bg-[#1b1c45]"
-          }`}
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" /> Previous
-        </button>
-        <button 
-          onClick={handleNextClick}
-          disabled={currentFileIndex >= allFiles.length - 1}
-          className={`flex items-center px-3 py-1 rounded-md ${
-            currentFileIndex >= allFiles.length - 1 || currentFileIndex === -1
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-              : "bg-[#2E3192] text-white hover:bg-[#1b1c45]"
-          }`}
-        >
-          Next <ArrowRight className="w-4 h-4 ml-1" />
-        </button>
+    <div className="w-80 bg-gradient-to-b from-gray-900 to-gray-800 border-r border-gray-700 p-6 h-full overflow-hidden shadow-2xl flex flex-col">
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-center bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent flex items-center justify-center">
+          <Folder className="w-6 h-6 mr-2 text-gray-400" /> 
+          File Explorer
+        </h2>
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent mt-3"></div>
       </div>
       
-      {/* Scrollable file/folder list */}
-      <div className="mt-4">
+      {/* Navigation Controls */}
+      <div className="mb-6">
+        <div className="flex space-x-2">
+          <button 
+            onClick={handlePrevClick}
+            disabled={currentFileIndex <= 0}
+            className={`flex-1 flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              currentFileIndex <= 0 
+                ? "bg-gray-800/50 text-gray-600 cursor-not-allowed" 
+                : "bg-gradient-to-r from-gray-700 to-gray-600 text-white hover:from-gray-600 hover:to-gray-500 shadow-lg hover:shadow-xl"
+            }`}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> 
+            <span className="hidden sm:inline">Previous</span>
+          </button>
+          
+          <button 
+            onClick={handleNextClick}
+            disabled={currentFileIndex >= allFiles.length - 1}
+            className={`flex-1 flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              currentFileIndex >= allFiles.length - 1 || currentFileIndex === -1
+                ? "bg-gray-800/50 text-gray-600 cursor-not-allowed" 
+                : "bg-gradient-to-r from-gray-700 to-gray-600 text-white hover:from-gray-600 hover:to-gray-500 shadow-lg hover:shadow-xl"
+            }`}
+          >
+            <span className="hidden sm:inline">Next</span>
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </button>
+        </div>
+        
+        {/* File Counter */}
+        {allFiles.length > 0 && (
+          <div className="mt-3 text-center">
+            <span className="text-xs text-gray-500">
+              {currentFileIndex + 1} of {allFiles.length} files
+            </span>
+            <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+              <div 
+                className="bg-gradient-to-r from-gray-600 to-gray-500 h-1 rounded-full transition-all duration-300"
+                style={{ width: `${((currentFileIndex + 1) / allFiles.length) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* File Tree */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
         {Object.entries(files).length === 0 ? (
-          <p className="text-gray-500 text-center">No files uploaded yet.</p>
+          <div className="text-center py-12">
+            <div className="text-gray-600 mb-4">
+              <Folder className="w-16 h-16 mx-auto" />
+            </div>
+            <p className="text-gray-500">No files uploaded yet</p>
+            <p className="text-gray-600 text-sm mt-1">Upload some images to get started</p>
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {renderTree(files)}
           </div>
         )}

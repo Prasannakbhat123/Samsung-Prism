@@ -1,0 +1,40 @@
+{
+  "imageName": "frame_000001.jpg",
+  "classes": [
+    {
+      "className": "1",
+      "instances": [
+        {
+          "instanceId": "Arrow-1",
+          "name": "Arrow",
+          "coordinates": [
+            [
+              153,
+              104
+            ],
+            [
+              253,
+              104
+            ],
+            [
+              272,
+              203
+            ],
+            [
+              324,
+              229
+            ],
+            [
+              310,
+              261
+            ],
+            [
+              160,
+              218
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

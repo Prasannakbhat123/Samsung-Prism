@@ -673,92 +673,130 @@ const ViewPage = ({ uploadedFiles, setViewMode }) => {
   console.log("File Names:", fileNames);
 
   return (
-    <div className="relative flex flex-col h-screen">
-      <nav className="flex items-center justify-between bg-gray-200 shadow-2xl text-white p-3">
-        <div className="flex items-center space-x-2">
-          <img src={logo} alt="Logo" className="h-8" />
-          <span className="text-xl font-bold text-[#2E3192]">
-            Image Segmenter
-          </span>
+    <div className="relative flex flex-col h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800">
+      {/* Modern Navigation Bar */}
+      <nav className="backdrop-blur-md bg-black/80 border-b border-gray-800 shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <img src={logo} alt="Logo" className="h-10 w-10 rounded-lg shadow-lg" />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-lg"></div>
+            </div>
+            <span className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Image Segmenter
+            </span>
+          </div>
+          
+          <button
+            onClick={() => setViewMode(false)}
+            className="group relative px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl border border-gray-600 hover:border-gray-500"
+          >
+            <span className="flex items-center space-x-2">
+              <svg className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Back to Upload</span>
+            </span>
+          </button>
         </div>
-        <button
-          onClick={() => setViewMode(false)}
-          className="border-2 border-[#2E3192] bg-transparent text-[#2E3192] px-4 py-2 rounded-full hover:bg-[#2E3192] hover:text-white transition"
-        >
-          ← Back
-        </button>
       </nav>
-      <div className="flex flex-grow">
-        <Tools currentTool={currentTool} setCurrentTool={setCurrentTool} />
-        <FolderTree files={uploadedFiles} onFileSelect={handleFileSelect} />
-        <Preview
-          selectedFile={selectedFile?.url}
-          currentTool={currentTool}
-          onProcessPolygons={handleProcessPolygons}
-          onUpdatePolygons={handleUpdatePolygons}
-          selectedPolygon={selectedPolygon}
-          setSelectedPolygon={setSelectedPolygon}
-          onPolygonSelection={handleProcessPolygons}
-          selectedPolygons={selectedPolygons}
-          // Pass explicit function to control UI visibility
-          onExportPolygons={(showUI = true) => viewJsonData(showUI)}
-          // Silent save function for when we don't want a popup
-          onForceSave={() => viewJsonData(false)}
-        />
-        <PolygonList
-          polygons={allPolygons}
-          onPolygonClick={handlePolygonClick}
-          fileNames={fileNames}
-          selectedFile={selectedFile?.url}
-          selectedPolygon={selectedPolygon} // Pass the selectedPolygon prop
-          onEditPolygon={handleEditPolygon}
-          onDeletePolygon={handleDeletePolygon}
-        />
-      </div>
-      {/* JSON Data Preview Modal - Updated to reflect that data is already saved */}
+
+      {/* Main Content Area */}
+<div className="flex flex-grow min-h-0">
+  <Tools currentTool={currentTool} setCurrentTool={setCurrentTool} />
+  <FolderTree files={uploadedFiles} onFileSelect={handleFileSelect} />
+  <div className="flex-1 flex flex-col min-h-0">
+    <Preview
+      selectedFile={selectedFile?.url}
+      currentTool={currentTool}
+      onProcessPolygons={handleProcessPolygons}
+      onUpdatePolygons={handleUpdatePolygons}
+      selectedPolygon={selectedPolygon}
+      setSelectedPolygon={setSelectedPolygon}
+      onPolygonSelection={handleProcessPolygons}
+      selectedPolygons={selectedPolygons}
+      onExportPolygons={(showUI = true) => viewJsonData(showUI)}
+      onForceSave={() => viewJsonData(false)}
+    />
+  </div>
+  <PolygonList
+    polygons={allPolygons}
+    onPolygonClick={handlePolygonClick}
+    fileNames={fileNames}
+    selectedFile={selectedFile?.url}
+    selectedPolygon={selectedPolygon}
+    onEditPolygon={handleEditPolygon}
+    onDeletePolygon={handleDeletePolygon}
+  />
+</div>
+
+      {/* Enhanced JSON Data Preview Modal */}
       {showJsonModal && jsonDataPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-3/4 h-3/4 overflow-auto relative">
-            <div className="absolute top-2 right-2">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-6xl h-5/6 overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div className="flex items-center space-x-3">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <h3 className="text-2xl font-bold text-white">
+                  JSON Export: <span className="text-green-400">{jsonDataPreview.jsonFileName}</span>
+                </h3>
+              </div>
               <button
                 onClick={closeJsonModal}
-                className="px-4 py-2 bg-[#2E3192] text-white rounded-md hover:bg-[#1a1c4a]"
+                className="group w-10 h-10 bg-gray-800 hover:bg-red-600 text-gray-400 hover:text-white rounded-xl flex items-center justify-center transition-all duration-300"
               >
-                Close
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
-            <div className="mt-8">
-              <h3 className="text-xl text-black font-bold mb-4">
-                <span className="text-green-600 mr-2">✓</span>
-                JSON File:{" "}
-                <span className="text-blue-600">
-                  {jsonDataPreview.jsonFileName}
-                </span>
-              </h3>
-              <p className="text-sm text-gray-600 mb-1">
-                Path: {jsonDataPreview.path}
-              </p>
-              <p className="text-sm text-green-600 mb-4 italic">
-                This file is automatically updated whenever polygons are created
-                or modified.
-              </p>
 
-              <div className="mb-4 bg-blue-200 rounded-md">
-                <h4 className="text-lg ml-2 text-blue-900 font-semibold">
-                  Text Format:
-                </h4>
-                <pre className="bg-blue-900 p-4 rounded-md overflow-auto max-h-60 text-white">
-                  {JsonStorageService.convertToText(jsonDataPreview)}
-                </pre>
+            {/* Modal Content */}
+            <div className="p-6 overflow-auto h-full">
+              <div className="mb-6">
+                <div className="flex items-center space-x-2 mb-2">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="text-gray-400 text-sm">Path: {jsonDataPreview.path}</span>
+                </div>
+                <div className="flex items-center space-x-2 text-green-400 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Auto-saved and updated with polygon changes</span>
+                </div>
               </div>
 
-              <div className="mb-4 bg-blue-200 rounded-md">
-                <h4 className="text-lg ml-2 text-blue-900 font-semibold">
-                  JSON Format:
-                </h4>
-                <pre className="p-4 bg-blue-900 rounded-md overflow-auto max-h-60 text-white">
-                  {JSON.stringify(jsonDataPreview, null, 2)}
-                </pre>
+              {/* Text Format Section */}
+              <div className="mb-8">
+                <div className="flex items-center space-x-2 mb-4">
+                  <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h4 className="text-xl font-semibold text-white">Text Format</h4>
+                </div>
+                <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
+                  <pre className="p-6 text-gray-300 text-sm overflow-auto max-h-60 font-mono leading-relaxed">
+                    {JsonStorageService.convertToText(jsonDataPreview)}
+                  </pre>
+                </div>
+              </div>
+
+              {/* JSON Format Section */}
+              <div>
+                <div className="flex items-center space-x-2 mb-4">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                  <h4 className="text-xl font-semibold text-white">JSON Format</h4>
+                </div>
+                <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
+                  <pre className="p-6 text-gray-300 text-sm overflow-auto max-h-60 font-mono leading-relaxed">
+                    {JSON.stringify(jsonDataPreview, null, 2)}
+                  </pre>
+                </div>
               </div>
             </div>
           </div>

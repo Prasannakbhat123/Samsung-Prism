@@ -6,11 +6,37 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
   const [currentFolder, setCurrentFolder] = useState(files);
   const [breadcrumbs, setBreadcrumbs] = useState([]);
   const [currentPath, setCurrentPath] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
+  // Add drag and drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length > 0) {
+      // Create a mock event object for handleFileUpload
+      const mockEvent = { target: { files: droppedFiles } };
+      handleFileUpload(mockEvent);
+    }
+  };
+
+  // All your existing functions remain the same...
   const handleFileUpload = (event) => {
     const uploadedFiles = Array.from(event.target.files);
     const newFiles = uploadedFiles
-      .sort((a, b) => a.name.localeCompare(b.name)) // Sort files by name
+      .sort((a, b) => a.name.localeCompare(b.name))
       .map((file) => ({
         name: file.name,
         type: "file",
@@ -19,7 +45,6 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
       }));
 
     if (breadcrumbs.length === 0) {
-      // Adding files to root
       setFiles((prev) => {
         const updatedFiles = {
           ...prev,
@@ -29,22 +54,18 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
         return updatedFiles;
       });
     } else {
-      // Adding files to a subfolder
       setFiles((prev) => {
         const updatedFiles = { ...prev };
         let target = updatedFiles;
         
-        // Navigate to the current folder in the overall structure
         for (const folder of breadcrumbs) {
           target = target[folder].contents;
         }
         
-        // Add the new files to the current folder
         newFiles.forEach((f) => {
           target[f.name] = f;
         });
         
-        // Update the current folder view
         setCurrentFolder(target);
         
         return updatedFiles;
@@ -54,23 +75,19 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
 
   const handleFolderUpload = async (event) => {
     const uploadedFiles = Array.from(event.target.files)
-      .sort((a, b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath)); // Sort by full path
+      .sort((a, b) => a.webkitRelativePath.localeCompare(b.webkitRelativePath));
     
-    // Get the root folder name from the first file's path
     const rootFolderName = uploadedFiles[0]?.webkitRelativePath.split('/')[0];
     
     let folderStructure = { ...files };
     
-    // Process files for the UI
     if (breadcrumbs.length > 0) {
       let target = folderStructure;
       
-      // Navigate to the current folder
       for (const folder of breadcrumbs) {
         target = target[folder].contents;
       }
       
-      // Process files
       uploadedFiles.forEach((file) => {
         const path = file.webkitRelativePath.split("/");
         let current = target;
@@ -92,7 +109,6 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
         }
       });
     } else {
-      // Adding to root
       uploadedFiles.forEach((file) => {
         const path = file.webkitRelativePath.split("/");
         let current = folderStructure;
@@ -117,7 +133,6 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
 
     setFiles(folderStructure);
     
-    // Update current folder view based on breadcrumbs
     let updatedCurrentFolder = folderStructure;
     for (const folder of breadcrumbs) {
       updatedCurrentFolder = updatedCurrentFolder[folder].contents;
@@ -125,14 +140,9 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
     
     setCurrentFolder(updatedCurrentFolder);
 
-    // Create JPEGImages folder copy in the backend
     try {
-      // First save files to temp folder
       const tempFolderPath = await FileService.saveFilesToTemp(uploadedFiles, rootFolderName);
-      
-      // Then create the JPEGImages folder
       await FileService.createJPEGImagesFolder(tempFolderPath);
-
       console.log('✅ Created JPEGImages folder successfully');
     } catch (error) {
       console.error('❌ Error creating JPEGImages folder:', error);
@@ -140,30 +150,13 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
   };
 
   const removeItem = (itemName, isFolder) => {
-    const removeItemRecursive = (obj) => {
-      const updatedObj = { ...obj };
-      
-      Object.keys(updatedObj).forEach(key => {
-        if (key === itemName) {
-          delete updatedObj[key];
-        } else if (updatedObj[key].type === 'folder') {
-          updatedObj[key].contents = removeItemRecursive(updatedObj[key].contents);
-        }
-      });
-      
-      return updatedObj;
-    };
-
-    // If we're at root level
     if (breadcrumbs.length === 0) {
       const updatedFiles = { ...files };
       
-      // If the item is a file, revoke its URL
       if (files[itemName] && files[itemName].type === 'file' && files[itemName].url) {
         URL.revokeObjectURL(files[itemName].url);
       }
       
-      // If the item is a folder, revoke URLs of all files inside
       if (files[itemName] && files[itemName].type === 'folder') {
         const revokeUrls = (obj) => {
           Object.values(obj).forEach(item => {
@@ -183,25 +176,20 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
       setFiles(updatedFiles);
       setCurrentFolder(updatedFiles);
     } else {
-      // We're in a subfolder
       const updatedFiles = { ...files };
       let current = updatedFiles;
       
-      // Navigate to parent folder of the current folder
       for (let i = 0; i < breadcrumbs.length - 1; i++) {
         current = current[breadcrumbs[i]].contents;
       }
       
-      // Last breadcrumb is the current folder
       const parentFolder = current;
       current = current[breadcrumbs[breadcrumbs.length - 1]].contents;
       
-      // If the item is a file, revoke its URL
       if (current[itemName] && current[itemName].type === 'file' && current[itemName].url) {
         URL.revokeObjectURL(current[itemName].url);
       }
       
-      // If the item is a folder, revoke URLs of all files inside
       if (current[itemName] && current[itemName].type === 'folder') {
         const revokeUrls = (obj) => {
           Object.values(obj).forEach(item => {
@@ -242,9 +230,7 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
     setBreadcrumbs([]);
   };
 
-  // Updated to include navigation back to root before submitting
   const handleDoneUploading = () => {
-    // If we're in a subfolder, first navigate back to root
     if (breadcrumbs.length > 0) {
       navigateToRoot();
     }
@@ -258,7 +244,7 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
     return Object.values(items).map((item, index) => (
       <div
         key={index}
-        className="w-32 h-32 m-2 relative flex flex-col items-center border-2 border-blue-400 rounded-lg p-2 cursor-pointer"
+        className="group relative bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 hover:border-gray-600 hover:shadow-xl transition-all duration-300 cursor-pointer"
         onClick={() => {
           if (item.type === "folder") {
             setCurrentFolder(item.contents);
@@ -271,92 +257,181 @@ const PictureUploader = ({ setUploadedFiles, setViewMode }) => {
             e.stopPropagation();
             removeItem(item.name, item.type === "folder");
           }}
-          className="absolute top-1 right-1 z-10 bg-transparent border-none cursor-pointer"
+          className="absolute -top-2 -right-2 z-10 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs transition-colors duration-200"
         >
-          ❌
+          ×
         </button>
-
-        {item.type === "file" ? (
-          <img 
-            src={item.url} 
-            alt={item.name} 
-            className="w-20 h-20 object-cover rounded-md" 
-          />
-        ) : (
-          <div className="w-20 h-20 flex items-center justify-center bg-blue-200 rounded-md">
-            📁
-          </div>
-        )}
-        <p className="text-sm font-medium text-blue-700 truncate w-full text-center mt-1">
-          {item.name}
-        </p>
+        
+        <div className="flex flex-col items-center space-y-3">
+          {item.type === "file" ? (
+            <div className="relative overflow-hidden rounded-lg">
+              <img 
+                src={item.url} 
+                alt={item.name} 
+                className="w-24 h-24 object-cover group-hover:scale-105 transition-transform duration-300" 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+          ) : (
+            <div className="w-24 h-24 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg group-hover:from-gray-600 group-hover:to-gray-700 transition-all duration-300">
+              <svg className="w-12 h-12 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
+              </svg>
+            </div>
+          )}
+          <p className="text-sm font-medium text-gray-300 truncate w-full text-center max-w-[120px]">
+            {item.name}
+          </p>
+        </div>
       </div>
     ));
   };
 
   return (
-    <div className="p-6 rounded-lg shadow-lg w-[70vw] mx-auto overflow-auto">
-      <h1 className="text-3xl font-bold text-blue-800 text-center mb-7">
-        Image & Folder Uploader
-      </h1>
-      
-      <div className="flex justify-center space-x-4 mb-6">
-        <label className="bg-[#2E3192] text-white px-5 py-3 rounded-full cursor-pointer hover:bg-[#262980] transition text-md font-semibold">
-          Upload Images
-          <input 
-            type="file" 
-            multiple 
-            onChange={handleFileUpload} 
-            className="hidden" 
-            accept="image/*"
-          />
-        </label>
-
-        <label className="border-2 border-[#2E3192] text-[#2E3192] px-5 py-3 rounded-full cursor-pointer hover:bg-[#e6e6e6] transition text-md font-semibold">
-          Upload Folders
-          <input 
-            type="file" 
-            directory="true"
-            webkitdirectory="true"
-            multiple 
-            onChange={handleFolderUpload} 
-            className="hidden" 
-          />
-        </label>
+    <div className="w-full max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="text-center mb-12">
+        <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent mb-4">
+          Upload Your Images
+        </h1>
+        <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+          Drag and drop your files or folders, or click to browse and upload
+        </p>
       </div>
 
+      {/* Upload Area */}
+      <div 
+        className={`relative mb-8 border-2 border-dashed rounded-2xl p-12 transition-all duration-300 ${
+          isDragOver 
+            ? 'border-gray-400 bg-gray-800/50' 
+            : 'border-gray-600 bg-gray-900/30'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div className="text-center">
+          <div className="mb-6">
+            <svg className="w-16 h-16 text-gray-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
+            <label className="group relative px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-xl cursor-pointer hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl">
+              <span className="flex items-center space-x-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Upload Images</span>
+              </span>
+              <input 
+                type="file" 
+                multiple 
+                onChange={handleFileUpload} 
+                className="hidden" 
+                accept="image/*"
+              />
+            </label>
+
+            <label className="group relative px-8 py-4 border-2 border-gray-600 text-gray-300 rounded-xl cursor-pointer hover:border-gray-500 hover:bg-gray-800/50 transition-all duration-300 font-semibold">
+              <span className="flex items-center space-x-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2m-6 4h4" />
+                </svg>
+                <span>Upload Folders</span>
+              </span>
+              <input 
+                type="file" 
+                directory="true"
+                webkitdirectory="true"
+                multiple 
+                onChange={handleFolderUpload} 
+                className="hidden" 
+              />
+            </label>
+          </div>
+          
+          <p className="text-gray-500 text-sm">
+            Supports JPG, PNG, GIF and other image formats
+          </p>
+        </div>
+      </div>
+
+      {/* Breadcrumbs */}
       {breadcrumbs.length > 0 && (
-        <div className="mb-4 flex items-center">
+        <div className="mb-6 flex items-center space-x-4 p-4 bg-gray-900/50 rounded-xl border border-gray-800">
           <button
-            className="text-blue-700 bg-transparent underline font-semibold mr-2"
+            className="flex items-center space-x-2 px-4 py-2 text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors duration-200"
             onClick={navigateToParentFolder}
           >
-            ⬅ Back to Parent
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Back</span>
           </button>
+          
           <button
-            className="text-blue-700 bg-transparent underline font-semibold"
+            className="flex items-center space-x-2 px-4 py-2 text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors duration-200"
             onClick={navigateToRoot}
           >
-            🏠 Back to Root
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+            </svg>
+            <span>Root</span>
           </button>
-          <span className="ml-2 text-gray-600">
-            Current path: / {breadcrumbs.join(" / ")}
-          </span>
+          
+          <div className="flex items-center text-gray-400">
+            <span className="text-sm">Path: /</span>
+            {breadcrumbs.map((crumb, index) => (
+              <span key={index} className="text-sm">
+                <span className="mx-1">/</span>
+                {crumb}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="flex flex-wrap justify-center">
-        {renderThumbnails(currentFolder)}
-      </div>
+      {/* File Grid */}
+      {Object.keys(currentFolder).length > 0 && (
+        <div className="mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {renderThumbnails(currentFolder)}
+          </div>
+        </div>
+      )}
 
+      {/* Done Button */}
       {Object.keys(files).length > 0 && (
-        <div className="flex justify-center mt-4">
+        <div className="flex justify-center">
           <button 
             onClick={handleDoneUploading}
-            className="bg-transparent border border-blue-950 text-blue-950 px-6 py-2 rounded-md hover:bg-blue-200"
+            className="group relative px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
           >
-            {breadcrumbs.length > 0 ? "Done (Return to Root & Submit All Files)" : "Done"}
+            <span className="flex items-center space-x-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>
+                {breadcrumbs.length > 0 ? "Done (Return to Root & Submit)" : "Process Images"}
+              </span>
+            </span>
           </button>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {Object.keys(currentFolder).length === 0 && Object.keys(files).length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-500 mb-4">
+            <svg className="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-400 mb-2">No files uploaded yet</h3>
+          <p className="text-gray-500">Start by uploading some images or folders above</p>
         </div>
       )}
     </div>

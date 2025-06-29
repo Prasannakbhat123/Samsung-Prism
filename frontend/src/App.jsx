@@ -77,33 +77,52 @@ const App = () => {
   }, [uploadedFiles]);
 
   return (
-    <div
-      className="w-screen min-h-screen bg-fixed bg-cover bg-center"
-      style={{ backgroundImage: `url(${homebg})` }}
-    >
-      <div className="w-screen min-h-screen overflow-auto">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Floating geometric shapes */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-gray-700/20 to-gray-600/10 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-48 h-48 bg-gradient-to-br from-gray-600/15 to-gray-500/5 rounded-full blur-2xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-32 left-1/4 w-40 h-40 bg-gradient-to-br from-gray-800/25 to-gray-700/10 rounded-full blur-xl animate-pulse delay-2000"></div>
+        <div className="absolute bottom-20 right-1/3 w-56 h-56 bg-gradient-to-br from-gray-500/10 to-gray-400/5 rounded-full blur-3xl animate-pulse delay-3000"></div>
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        
+        {/* Radial gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-radial from-transparent via-black/5 to-black/20"></div>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 min-h-screen">
         {!viewMode ? (
           <>
             <Navbar />
             <HomeSection />
+            
+            {/* Try Section */}
             <section
               id="try"
-              className="w-screen h-[65vh] flex items-center flex-col space-y-8 overflow-auto"
+              className="min-h-[80vh] flex items-center justify-center py-20 px-6 lg:px-8"
             >
-              <PictureUploader
-                setUploadedFiles={handleSetUploadedFiles}
-                setViewMode={handleSetViewMode}
-              />
+              <div className="w-full max-w-6xl">
+                <PictureUploader
+                  setUploadedFiles={handleSetUploadedFiles}
+                  setViewMode={handleSetViewMode}
+                />
+              </div>
             </section>
 
+            {/* FAQ Section */}
             <section
               id="faq"
-              className="w-screen h-screen flex items-center justify-center "
+              className="min-h-screen flex items-center justify-center py-20 px-6 lg:px-8"
             >
-              <div className="w-full max-w-5xl h-full flex items-center justify-center">
+              <div className="w-full max-w-5xl">
                 <Faq />
               </div>
             </section>
+            
             <Footer />
           </>
         ) : (

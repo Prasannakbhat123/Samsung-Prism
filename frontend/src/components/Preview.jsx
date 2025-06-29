@@ -32,6 +32,7 @@ const Preview = ({
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
   const [hoveredPolygonIndex, setHoveredPolygonIndex] = useState(null);
   const [isDraggingPoint, setIsDraggingPoint] = useState(false);
+  const [isRitmMode, setIsRitmMode] = useState(false);
   
   // State for polygon naming
   const [showNamingModal, setShowNamingModal] = useState(false);
@@ -997,38 +998,18 @@ const Preview = ({
     ...customShapeNames.filter(name => !predefinedShapes.includes(name)),
   ];
   
-  return (
-    <div
-      className="w-10/12 h-full flex flex-col justify-center items-center bg-[#fff] pt-20 px-8 shadow-xl overflow-auto"
-      style={{
-        msOverflowStyle: "none" /* IE and Edge */,
-        scrollbarWidth: "none" /* Firefox */,
-        WebkitOverflowScrolling: "touch" /* Smooth scrolling on iOS */,
-      }}
-    >
-      <style jsx>{`
-        div::-webkit-scrollbar {
-          display: none; /* Chrome, Safari and Opera */
-        }
-      `}</style>
-      {selectedFile ? (
+return (
+  <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-br from-gray-900 to-gray-800">
+    {selectedFile ? (
+      <>
+        {/* Fixed Canvas Container */}
         <div
           ref={canvasContainerRef}
-          className="relative w-full h-full flex flex-col items-center justify-center"
-          style={{
-            aspectRatio: imageSize.width / imageSize.height || 16/9,
-            maxHeight: "75vh", // Increased height for better visibility
-          }}
+          className="h-[60vh] flex items-center justify-center p-4 flex-shrink-0"
         >
-          {/* Hidden image for reference */}
-          <img
-            ref={imageRef}
-            src={selectedFile}
-            alt="Preview"
-            className="hidden"
-          />
+          {/* Canvas content stays the same */}
+          <img ref={imageRef} src={selectedFile} alt="Preview" className="hidden" />
           
-          {/* Canvas component */}
           <div className="relative">
             <canvas
               ref={canvasRef}
@@ -1037,53 +1018,41 @@ const Preview = ({
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
               onMouseDown={startPan}
-              className="max-w-full max-h-full border-4 border-gray-400 rounded-lg shadow-md"
-              style={{ objectFit: "contain" }}
+              className="border-2 border-gray-600 rounded-xl shadow-2xl bg-gray-900"
+              style={{ 
+                objectFit: "contain",
+                maxWidth: "85vw",
+                maxHeight: "55vh"
+              }}
             />
             
             {/* Zoom Controls */}
-            <div className="absolute top-2 right-2 bg-white p-2 rounded-md shadow-md flex space-x-2">
-              <button 
-                onClick={handleZoomIn}
-                className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-md text-black border border-gray-300"
-                title="Zoom In"
-              >
-                +
-              </button>
-              <button 
-                onClick={handleZoomOut}
-                className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-md text-black border border-gray-300"
-                title="Zoom Out"
-              >
-                -
-              </button>
-              <button 
-                onClick={handleResetZoom}
-                className="px-2 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-md text-xs text-black border border-gray-300"
-                title="Reset Zoom"
-              >
-                Reset
-              </button>
-              <span className="px-1 flex items-center text-sm">
-                {Math.round(zoomLevel * 100)}%
-              </span>
+            <div className="absolute top-4 right-4 backdrop-blur-md bg-black/50 border border-gray-700 rounded-xl p-2 shadow-2xl">
+              <div className="flex items-center space-x-2">
+                <button onClick={handleZoomIn} className="w-8 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200" title="Zoom In">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </button>
+                <button onClick={handleZoomOut} className="w-8 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200" title="Zoom Out">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
+                  </svg>
+                </button>
+                <button onClick={handleResetZoom} className="px-3 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs transition-colors duration-200" title="Reset Zoom">
+                  Reset
+                </button>
+                <div className="px-2 text-xs text-gray-300 font-mono">
+                  {Math.round(zoomLevel * 100)}%
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Canvas Controls Section */}
-          <CanvasControls 
-            imageLoadError={imageLoadError}
-            pointRadius={pointRadius}
-            setPointRadius={setPointRadius}
-            selectedPolygon={selectedPolygon}
-            pointDensity={pointDensity}
-            handlePointDensityChange={handlePointDensityChange}
-            handlePointDensityMouseUp={handlePointDensityMouseUp}
-            displayMode={displayMode}
-            setDisplayMode={setDisplayMode}
-          />
+        {/* Scrollable Controls Section */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
 
-          {/* Action Buttons */}
           <ActionButtons 
             joinPolygon={joinPolygon} 
             onExportPolygons={onExportPolygons}
@@ -1092,29 +1061,54 @@ const Preview = ({
             selectedFile={selectedFile}
             onUpdatePolygons={onUpdatePolygons}
             onForceSave={onForceSave}
+            onRitmModeChange={setIsRitmMode}
           />
-        </div>
-      ) : (
-        <p className="text-[#2E3192] text-lg font-semibold">
-          Select a file to preview
-        </p>
-      )}
 
-      {/* Naming Modal */}
-      <NamingModal
-        showNamingModal={showNamingModal}
-        polygonName={polygonName}
-        setPolygonName={setPolygonName}
-        customName={customName}
-        setCustomName={setCustomName}
-        polygonGroup={polygonGroup}
-        setPolygonGroup={setPolygonGroup}
-        handleCancelNaming={handleCancelNaming}
-        handleSavePolygon={handleSavePolygon}
-        allShapeNames={allShapeNames}
-      />
-    </div>
-  );
+           {!isRitmMode && (
+              <CanvasControls 
+                imageLoadError={imageLoadError}
+                pointRadius={pointRadius}
+                setPointRadius={setPointRadius}
+                selectedPolygon={selectedPolygon}
+                pointDensity={pointDensity}
+                handlePointDensityChange={handlePointDensityChange}
+                handlePointDensityMouseUp={handlePointDensityMouseUp}
+                displayMode={displayMode}
+                setDisplayMode={setDisplayMode}
+              />
+            )}
+        </div>
+      </>
+    ) : (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-24 h-24 mx-auto mb-6 text-gray-600">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-full h-full">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-400 mb-2">No Image Selected</h3>
+          <p className="text-gray-500">Select a file from the explorer to start editing</p>
+        </div>
+      </div>
+    )}
+
+    {/* Naming Modal */}
+    <NamingModal
+      showNamingModal={showNamingModal}
+      polygonName={polygonName}
+      setPolygonName={setPolygonName}
+      customName={customName}
+      setCustomName={setCustomName}
+      polygonGroup={polygonGroup}
+      setPolygonGroup={setPolygonGroup}
+      handleCancelNaming={handleCancelNaming}
+      handleSavePolygon={handleSavePolygon}
+      allShapeNames={allShapeNames}
+    />
+  </div>
+);
+
 };
 
 export default Preview;
