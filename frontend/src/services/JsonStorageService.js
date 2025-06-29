@@ -300,7 +300,7 @@ class JsonStorageService {
       })
       .then(data => {
         console.log(`✅ Successfully saved ${fileName} to JSON folder via API`);
-        this._showNotification(`JSON saved: ${fileName}`, 'success');
+        // this._showNotification(`JSON saved: ${fileName}`, 'success');
       })
       .catch(err => {
         console.error('❌ Error saving file:', err);
@@ -341,26 +341,25 @@ class JsonStorageService {
     element.download = filename;
     
     // Add a notification message
-    const notification = document.createElement('div');
-    notification.style.position = 'fixed';
-    notification.style.bottom = '20px';
-    notification.style.left = '50%';
-    notification.style.transform = 'translateX(-50%)';
-    notification.style.backgroundColor = '#2E3192';
-    notification.style.color = 'white';
-    notification.style.padding = '10px 20px';
-    notification.style.borderRadius = '5px';
-    notification.style.zIndex = '9999';
-    notification.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span>📁 JSON saved to <b>${filename}</b></span>
-        <button id="download-btn" style="padding:5px 10px;background:white;color:#2E3192;border:none;border-radius:3px;cursor:pointer;">
-          Save Local Copy
-        </button>
-      </div>
-    `;
-    
-    document.body.appendChild(notification);
+    // const notification = document.createElement('div');
+    // notification.style.position = 'fixed';
+    // notification.style.bottom = '20px';
+    // notification.style.left = '50%';
+    // notification.style.transform = 'translateX(-50%)';
+    // notification.style.backgroundColor = '#2E3192';
+    // notification.style.color = 'white';
+    // notification.style.padding = '10px 20px';
+    // notification.style.borderRadius = '5px';
+    // notification.style.zIndex = '9999';
+    // notification.innerHTML = `
+    //   <div style="display:flex;align-items:center;gap:10px;">
+    //     <span>📁 JSON saved to <b>${filename}</b></span>
+    //     <button id="download-btn" style="padding:5px 10px;background:white;color:#2E3192;border:none;border-radius:3px;cursor:pointer;">
+    //       Save Local Copy
+    //     </button>
+    //   </div>
+    // `;
+    // document.body.appendChild(notification);
     
     // Add event listener to the download button
     document.getElementById('download-btn').addEventListener('click', function() {
@@ -370,12 +369,12 @@ class JsonStorageService {
     
     // Remove notification after 5 seconds
     setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transition = 'opacity 0.5s';
+      // notification.style.opacity = '0';
+      // notification.style.transition = 'opacity 0.5s';
       setTimeout(() => notification.remove(), 500);
     }, 5000);
     
-    console.log(`✅ JSON saved for ${filename}. Download offered as fallback.`);
+    // console.log(`✅ JSON saved for ${filename}. Download offered as fallback.`);
   }
   
   /**

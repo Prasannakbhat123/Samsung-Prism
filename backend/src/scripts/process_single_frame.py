@@ -121,7 +121,7 @@ def process_single_frame(current_frame_number):
             from mask_to_json import mask_to_json
             # Generate meta.json before mask_to_json
             meta_script = str(base_dir / 'scripts' / 'generate_meta_json.py')
-            meta_json_path = str(base_dir / 'json' / 'meta.json')
+            meta_json_path = str(base_dir / 'predicted_masks' / 'meta.json')
             subprocess.run(['python3', meta_script], check=True)
             mask_to_json(str(masks_dir / predicted_mask), str(base_dir / 'json'), meta_json_path)
             result["success"] = True

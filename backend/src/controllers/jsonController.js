@@ -100,7 +100,7 @@ class JsonController {
       this.createMask(baseFileName);
 
       res.status(200).json({ 
-        message: 'JSON saved successfully',
+        // message: 'JSON saved successfully',
         fileName: `${baseFileName}.json`
       });
     } catch (error) {
