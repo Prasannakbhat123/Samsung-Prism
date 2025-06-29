@@ -33,6 +33,8 @@ const Preview = ({
   const [hoveredPolygonIndex, setHoveredPolygonIndex] = useState(null);
   const [isDraggingPoint, setIsDraggingPoint] = useState(false);
   const [isRitmMode, setIsRitmMode] = useState(false);
+  const [maskImage, setMaskImage] = useState(null);
+  const [ritmError, setRitmError] = useState(null);
   
   // State for polygon naming
   const [showNamingModal, setShowNamingModal] = useState(false);
@@ -68,6 +70,30 @@ const Preview = ({
   // Initialize and handle file changes
   useEffect(() => {
     if (selectedFile) {
+      // --- RITM: Load image by name from backend ---
+      const fileName = selectedFile.split(/[/\\]/).pop(); 
+      const fileName2 = blobMapper.getFilename(selectedFile) || selectedFile.split(/[/\\]/).pop();
+
+      // // Extract just filename from path
+      fetch('http://localhost:5000/load_image_by_name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: fileName2 })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.image) {
+            setMaskImage(data.image);
+            setRitmError(null);
+          } else {
+            setRitmError((data.error ? `Error: ${data.error}\n` : '') + (data.trace ? `Trace: ${data.trace}` : ''));
+          }
+        })
+        .catch(err => {
+          setRitmError('Error loading image from backend: ' + err);
+        });
+      // --- END RITM ---
+
       if (previousFileRef.current !== selectedFile) {
         // Reset image error state when changing files
         setImageLoadError(false);
@@ -84,9 +110,6 @@ const Preview = ({
         setCurrentPolygon([]);
 
         // Try to load polygon data for this file from the server
-        const fileName = selectedFile.split(/[/\\]/).pop(); // Extract just filename from path
-        
-        // Attempt to load polygon data from JSON storage service or backend
         const loadPolygonData = async () => {
           try {
             // First try local storage
@@ -625,7 +648,7 @@ const Preview = ({
   };
 
   // Handle canvas events with proper zoom coordinate transformation
-  const handleCanvasClick = (e) => {
+  const handleCanvasClick = async (e) => {
     // If we're in panning mode, don't handle clicks
     if (isPanning) return;
     
@@ -650,6 +673,36 @@ const Preview = ({
     // Convert to original image coordinates
     const x = transformedX * scaleX;
     const y = transformedY * scaleY;
+
+    // If RITM mode, send click to backend
+    if (isRitmMode) {
+      // Only handle left click (button 0)
+      if (e.button && e.button !== 0) return;
+      try {
+        const response = await fetch('http://localhost:5000/add_click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ x, y, is_positive: true })
+        });
+        const data = await response.json();
+        if (data.success && data.image) {
+          setMaskImage(data.image); // base64 PNG
+          setRitmError(null); // clear error
+        } else {
+          // Show error/debug/trace in UI
+          setRitmError(
+            (data.error ? `Error: ${data.error}\n` : '') +
+            (data.debug ? `Debug: ${data.debug}\n` : '') +
+            (data.trace ? `Trace: ${data.trace}` : '')
+          );
+          console.error('RITM backend error:', data);
+        }
+      } catch (err) {
+        setRitmError('Error sending click to RITM backend: ' + err);
+        console.error('Error sending click to RITM backend:', err);
+      }
+      return; // Do not process local polygons in RITM mode
+    }
 
     // If right mouse button, finish point dragging
     if (e.button === 2) {
@@ -998,117 +1051,138 @@ const Preview = ({
     ...customShapeNames.filter(name => !predefinedShapes.includes(name)),
   ];
   
-return (
-  <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-br from-gray-900 to-gray-800">
-    {selectedFile ? (
-      <>
-        {/* Fixed Canvas Container */}
-        <div
-          ref={canvasContainerRef}
-          className="h-[60vh] flex items-center justify-center p-4 flex-shrink-0"
-        >
-          {/* Canvas content stays the same */}
-          <img ref={imageRef} src={selectedFile} alt="Preview" className="hidden" />
-          
-          <div className="relative">
-            <canvas
-              ref={canvasRef}
-              onClick={handleCanvasClick}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onMouseDown={startPan}
-              className="border-2 border-gray-600 rounded-xl shadow-2xl bg-gray-900"
-              style={{ 
-                objectFit: "contain",
-                maxWidth: "85vw",
-                maxHeight: "55vh"
-              }}
-            />
+  return (
+    <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-br from-gray-900 to-gray-800">
+      {/* Show RITM error if present */}
+      {isRitmMode && ritmError && (
+        <div style={{ color: 'red', whiteSpace: 'pre-wrap', margin: '8px 0', background: '#220', padding: 8, borderRadius: 8 }}>
+          {ritmError}
+        </div>
+      )}
+      {selectedFile ? (
+        <>
+          {/* Fixed Canvas Container */}
+          <div
+            ref={canvasContainerRef}
+            className="h-[60vh] flex items-center justify-center p-4 flex-shrink-0"
+          >
+            {/* Canvas content stays the same */}
+            <img ref={imageRef} src={selectedFile} alt="Preview" className="hidden" />
             
-            {/* Zoom Controls */}
-            <div className="absolute top-4 right-4 backdrop-blur-md bg-black/50 border border-gray-700 rounded-xl p-2 shadow-2xl">
-              <div className="flex items-center space-x-2">
-                <button onClick={handleZoomIn} className="w-8 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200" title="Zoom In">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </button>
-                <button onClick={handleZoomOut} className="w-8 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200" title="Zoom Out">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
-                  </svg>
-                </button>
-                <button onClick={handleResetZoom} className="px-3 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs transition-colors duration-200" title="Reset Zoom">
-                  Reset
-                </button>
-                <div className="px-2 text-xs text-gray-300 font-mono">
-                  {Math.round(zoomLevel * 100)}%
+            <div className="relative">
+              <canvas
+                ref={canvasRef}
+                onClick={handleCanvasClick}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onMouseDown={startPan}
+                className="border-2 border-gray-600 rounded-xl shadow-2xl bg-gray-900"
+                style={{ 
+                  objectFit: "contain",
+                  maxWidth: "85vw",
+                  maxHeight: "55vh"
+                }}
+              />
+              {/* RITM Mask Overlay */}
+              {isRitmMode && maskImage && (
+                <img
+                  src={`data:image/png;base64,${maskImage}`}
+                  alt="RITM Mask"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 10,
+                    pointerEvents: 'none',
+                    opacity: 0.7
+                  }}
+                />
+              )}
+              {/* Zoom Controls */}
+              <div className="absolute top-4 right-4 backdrop-blur-md bg-black/50 border border-gray-700 rounded-xl p-2 shadow-2xl">
+                <div className="flex items-center space-x-2">
+                  <button onClick={handleZoomIn} className="w-8 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200" title="Zoom In">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </button>
+                  <button onClick={handleZoomOut} className="w-8 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200" title="Zoom Out">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
+                    </svg>
+                  </button>
+                  <button onClick={handleResetZoom} className="px-3 h-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs transition-colors duration-200" title="Reset Zoom">
+                    Reset
+                  </button>
+                  <div className="px-2 text-xs text-gray-300 font-mono">
+                    {Math.round(zoomLevel * 100)}%
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Scrollable Controls Section */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+          {/* Scrollable Controls Section */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
 
-          <ActionButtons 
-            joinPolygon={joinPolygon} 
-            onExportPolygons={onExportPolygons}
-            currentFrame={selectedFile ? extractFrameNumber(selectedFile) : 0}
-            isFirstFrame={selectedFile ? extractFrameNumber(selectedFile) === 0 : true}
-            selectedFile={selectedFile}
-            onUpdatePolygons={onUpdatePolygons}
-            onForceSave={onForceSave}
-            onRitmModeChange={setIsRitmMode}
-          />
+            <ActionButtons 
+              joinPolygon={joinPolygon} 
+              onExportPolygons={onExportPolygons}
+              currentFrame={selectedFile ? extractFrameNumber(selectedFile) : 0}
+              isFirstFrame={selectedFile ? extractFrameNumber(selectedFile) === 0 : true}
+              selectedFile={selectedFile}
+              onUpdatePolygons={onUpdatePolygons}
+              onForceSave={onForceSave}
+              onRitmModeChange={setIsRitmMode}
+            />
 
-           {!isRitmMode && (
-              <CanvasControls 
-                imageLoadError={imageLoadError}
-                pointRadius={pointRadius}
-                setPointRadius={setPointRadius}
-                selectedPolygon={selectedPolygon}
-                pointDensity={pointDensity}
-                handlePointDensityChange={handlePointDensityChange}
-                handlePointDensityMouseUp={handlePointDensityMouseUp}
-                displayMode={displayMode}
-                setDisplayMode={setDisplayMode}
-              />
-            )}
-        </div>
-      </>
-    ) : (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-24 h-24 mx-auto mb-6 text-gray-600">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-full h-full">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+             {!isRitmMode && (
+                <CanvasControls 
+                  imageLoadError={imageLoadError}
+                  pointRadius={pointRadius}
+                  setPointRadius={setPointRadius}
+                  selectedPolygon={selectedPolygon}
+                  pointDensity={pointDensity}
+                  handlePointDensityChange={handlePointDensityChange}
+                  handlePointDensityMouseUp={handlePointDensityMouseUp}
+                  displayMode={displayMode}
+                  setDisplayMode={setDisplayMode}
+                />
+              )}
           </div>
-          <h3 className="text-xl font-semibold text-gray-400 mb-2">No Image Selected</h3>
-          <p className="text-gray-500">Select a file from the explorer to start editing</p>
+        </>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-24 h-24 mx-auto mb-6 text-gray-600">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-full h-full">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-400 mb-2">No Image Selected</h3>
+            <p className="text-gray-500">Select a file from the explorer to start editing</p>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {/* Naming Modal */}
-    <NamingModal
-      showNamingModal={showNamingModal}
-      polygonName={polygonName}
-      setPolygonName={setPolygonName}
-      customName={customName}
-      setCustomName={setCustomName}
-      polygonGroup={polygonGroup}
-      setPolygonGroup={setPolygonGroup}
-      handleCancelNaming={handleCancelNaming}
-      handleSavePolygon={handleSavePolygon}
-      allShapeNames={allShapeNames}
-    />
-  </div>
-);
-
+      {/* Naming Modal */}
+      <NamingModal
+        showNamingModal={showNamingModal}
+        polygonName={polygonName}
+        setPolygonName={setPolygonName}
+        customName={customName}
+        setCustomName={setCustomName}
+        polygonGroup={polygonGroup}
+        setPolygonGroup={setPolygonGroup}
+        handleCancelNaming={handleCancelNaming}
+        handleSavePolygon={handleSavePolygon}
+        allShapeNames={allShapeNames}
+      />
+    </div>
+  );
 };
 
 export default Preview;

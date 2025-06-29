@@ -9,6 +9,7 @@ import os
 import tempfile
 import json
 import sys
+import traceback
 
 # Add parent directory to Python path for isegm module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -108,56 +109,35 @@ def upload_image():
 
 @app.route('/add_click', methods=['POST'])
 def add_click():
-    global current_controller, current_filename
+    global current_controller
     
     if current_controller is None:
-        return jsonify({'error': 'No image loaded'}), 400
-    
-    data = request.get_json()
-    x = data.get('x')
-    y = data.get('y')
-    is_positive = data.get('is_positive', True)
+        return jsonify({'error': 'No image loaded', 'debug': 'current_controller is None'}), 400
     
     try:
+        data = request.get_json()
+        x = data.get('x')
+        y = data.get('y')
+        is_positive = data.get('is_positive', True)
         current_controller.add_click(x, y, is_positive)
-        
         # Get the visualization
         vis_image = current_controller.get_visualization(alpha_blend=0.5, click_radius=3)
-
-        # --- Save mask to 'masks/mask.png' after every click ---
-        mask = getattr(current_controller, 'result_mask', None)
-        if mask is not None and current_filename:
-            if mask.max() < 256:
-                mask = mask.astype(np.uint8)
-                mask *= 255 // mask.max() if mask.max() > 0 else 255
-            masks_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'masks')
-            os.makedirs(masks_dir, exist_ok=True)
-            mask_path = os.path.join(masks_dir, f'{current_filename}.png')
-            cv2.imwrite(mask_path, mask)
-            try:
-                mask_to_json(mask_path, masks_dir)
-                generate_meta_json(masks_dir)  # Update meta.json after each mask/JSON update
-            except Exception as e:
-                print(f"Error creating JSON or meta for mask: {e}")
-        # --- End mask saving ---
-        
         if vis_image is not None:
-            # Convert to base64
             pil_image = Image.fromarray(vis_image)
             buffer = io.BytesIO()
             pil_image.save(buffer, format='PNG')
             img_str = base64.b64encode(buffer.getvalue()).decode()
-            
             return jsonify({
                 'success': True,
                 'image': img_str,
                 'clicks_count': len(current_controller.clicker.clicks_list)
             })
         else:
-            return jsonify({'error': 'Failed to generate visualization'}), 500
-            
+            return jsonify({'error': 'Failed to generate visualization', 'debug': 'vis_image is None'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        tb = traceback.format_exc()
+        print(f"Error in /add_click: {e}\n{tb}")
+        return jsonify({'error': str(e), 'trace': tb}), 500
 
 @app.route('/finish_object', methods=['POST'])
 def finish_object():
@@ -289,6 +269,51 @@ def model_info():
         'supports_prev_mask': getattr(model, 'with_prev_mask', False),
         'model_class': type(model).__name__
     })
+
+@app.route('/load_image_by_name', methods=['POST'])
+def load_image_by_name():
+    global current_controller, current_image, session_data, current_filename
+
+    data = request.get_json()
+    filename = data.get('filename')
+    if not filename:
+        return jsonify({'error': 'No filename provided'}), 400
+
+    # Path to JPEGImages directory
+    jpeg_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/JPEGImages'
+    image_path = os.path.join(jpeg_dir, filename)
+    if not os.path.exists(image_path):
+        return jsonify({'error': f'Image not found: {image_path}'}), 404
+
+    try:
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        current_filename = os.path.splitext(filename)[0]
+        current_image = image
+        current_controller = InteractiveController(
+            net=model,
+            device=model_config.get('device', 'cpu'),
+            predictor_params={'brs_mode': 'NoBRS'},
+            update_image_callback=lambda reset_canvas=False: None,
+            prob_thresh=0.5
+        )
+        current_controller.set_image(image)
+
+        pil_image = Image.fromarray(image)
+        buffer = io.BytesIO()
+        pil_image.save(buffer, format='PNG')
+        img_str = base64.b64encode(buffer.getvalue()).decode()
+
+        return jsonify({
+            'success': True,
+            'image': img_str,
+            'width': image.shape[1],
+            'height': image.shape[0]
+        })
+    except Exception as e:
+        tb = traceback.format_exc()
+        print(f"Error in /load_image_by_name: {e}\n{tb}")
+        return jsonify({'error': str(e), 'trace': tb}), 500
 
 if __name__ == '__main__':
     print("Starting Interactive Segmentation Web Demo...")
