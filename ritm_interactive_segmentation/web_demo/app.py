@@ -331,26 +331,6 @@ def load_image_by_name():
         print(f"Error in /load_image_by_name: {e}\n{tb}")
         return jsonify({'error': str(e), 'trace': tb}), 500
 
-@app.route('/save_ritm_json', methods=['POST'])
-def save_ritm_json():
-    global current_controller, current_filename
-    if current_controller is None or current_filename is None:
-        return jsonify({'error': 'No image loaded'}), 400
-    try:
-        # Path to the latest mask
-        mask_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/mask-ritm'
-        mask_path = os.path.join(mask_dir, f'{current_filename}.png')
-        if not os.path.exists(mask_path):
-            return jsonify({'error': f'Mask not found for {current_filename}'}), 404
-        # Output JSON directory
-        json_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/json'
-        # Use the updated RITM-to-JSON logic (sequential class names)
-        from mask_to_json import mask_to_json as mask_to_json_fn
-        mask_to_json_fn(mask_path, json_dir)
-        return jsonify({'success': True, 'json_file': f'{current_filename}.json'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 if __name__ == '__main__':
     print("Starting Interactive Segmentation Web Demo...")
     print(f"Model type: {model_config.get('model_type', 'unknown')}")
