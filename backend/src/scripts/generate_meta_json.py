@@ -1,19 +1,28 @@
 import os
 import json
+import re
 
 def compute_bbox(coords):
     xs = [pt[0] for pt in coords]
     ys = [pt[1] for pt in coords]
     return [min(xs), min(ys), max(xs), max(ys)]
 
+def extract_frame_number(filename):
+    match = re.search(r'(\d+)', filename)
+    return int(match.group(1)) if match else -1
+
 def main():
     json_dir = os.path.join(os.path.dirname(__file__), '../json')
+    files = [f for f in os.listdir(json_dir) if f.endswith('.json') and f != 'meta.json']
+    # Sort files by frame number
+    files_sorted = sorted(files, key=extract_frame_number)
     meta = {}
-    for fname in os.listdir(json_dir):
-        if not fname.endswith('.json'):
-            continue
-        frame_key = os.path.splitext(fname)[0]
-        with open(os.path.join(json_dir, fname), 'r') as f:
+    for idx, fname in enumerate(files_sorted):
+        if idx == 0:
+            continue  # No previous frame for the first frame
+        prev_fname = files_sorted[idx - 1]
+        frame_key = os.path.splitext(fname)[0]  # meta for this frame
+        with open(os.path.join(json_dir, prev_fname), 'r') as f:
             data = json.load(f)
         meta[frame_key] = []
         for cls in data.get('classes', []):

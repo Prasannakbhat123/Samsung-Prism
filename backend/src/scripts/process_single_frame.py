@@ -5,6 +5,7 @@ import sys
 import json
 from pathlib import Path
 import argparse
+import subprocess
 
 # Add the XMem project root to Python path
 xmem_root = Path('/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/XMem2-cpu-web')
@@ -118,7 +119,11 @@ def process_single_frame(current_frame_number):
 
             # Convert the new mask to JSON
             from mask_to_json import mask_to_json
-            mask_to_json(str(masks_dir / predicted_mask), str(base_dir / 'json'))
+            # Generate meta.json before mask_to_json
+            meta_script = str(base_dir / 'scripts' / 'generate_meta_json.py')
+            meta_json_path = str(base_dir / 'json' / 'meta.json')
+            subprocess.run(['python3', meta_script], check=True)
+            mask_to_json(str(masks_dir / predicted_mask), str(base_dir / 'json'), meta_json_path)
             result["success"] = True
             result["message"] = f"Successfully processed frame {current_frame_number}"
         else:
