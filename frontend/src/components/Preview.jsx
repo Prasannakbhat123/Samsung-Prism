@@ -35,6 +35,7 @@ const Preview = ({
   const [isRitmMode, setIsRitmMode] = useState(false);
   const [maskImage, setMaskImage] = useState(null);
   const [ritmError, setRitmError] = useState(null);
+  const [ritmReady, setRitmReady] = useState(false);
   
   // State for polygon naming
   const [showNamingModal, setShowNamingModal] = useState(false);
@@ -70,6 +71,7 @@ const Preview = ({
   // Initialize and handle file changes
   useEffect(() => {
     if (selectedFile) {
+      setRitmReady(false); // Not ready until backend loads image
       // --- RITM: Load image by name from backend ---
       const fileName = selectedFile.split(/[/\\]/).pop(); 
       const fileName2 = blobMapper.getFilename(selectedFile) || selectedFile.split(/[/\\]/).pop();
@@ -85,12 +87,15 @@ const Preview = ({
           if (data.success && data.image) {
             setMaskImage(data.image);
             setRitmError(null);
+            setRitmReady(true); // Now ready for clicks
           } else {
             setRitmError((data.error ? `Error: ${data.error}\n` : '') + (data.trace ? `Trace: ${data.trace}` : ''));
+            setRitmReady(false);
           }
         })
         .catch(err => {
           setRitmError('Error loading image from backend: ' + err);
+          setRitmReady(false);
         });
       // --- END RITM ---
 
@@ -676,6 +681,10 @@ const Preview = ({
 
     // If RITM mode, send click to backend
     if (isRitmMode) {
+      if (!ritmReady) {
+        setRitmError('RITM backend is not ready. Please wait for the image to load.');
+        return;
+      }
       // Only handle left click (button 0)
       if (e.button && e.button !== 0) return;
       try {
