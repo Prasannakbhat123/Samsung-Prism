@@ -187,12 +187,14 @@ const ActionButtons = ({
       </div>
       
       {/* Error message display */}
+      {/*
       {errorMessage && (
         <div className="text-red-600 bg-red-100 border border-red-400 rounded-md px-4 py-2 mt-2 max-w-md text-center">
           <p>{errorMessage}</p>
           <p className="text-xs mt-1">Make sure the backend server is running at the correct address.</p>
         </div>
       )}
+      */}
     </div>
   );
 };
