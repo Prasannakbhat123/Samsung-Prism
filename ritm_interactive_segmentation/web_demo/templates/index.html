@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Segmentation Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .left-panel {
+            flex: 1;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .right-panel {
+            flex: 2;
+            padding: 30px;
+            background: white;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            border: 2px dashed #ddd;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .upload-section:hover {
+            border-color: #4facfe;
+            background: #f8f9ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .canvas-container {
+            position: relative;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f8f9fa;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #imageCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            cursor: crosshair;
+        }
+
+        .controls {
+            margin-top: 30px;
+        }
+
+        .control-group {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .control-group h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-finish {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+
+        .btn-undo {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .status h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .status p {
+            color: #424242;
+            margin: 5px 0;
+        }
+
+        .instructions {
+            background: #fff3e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #ff9800;
+        }
+
+        .instructions h4 {
+            color: #e65100;
+            margin-bottom: 15px;
+        }
+
+        .instructions ul {
+            color: #424242;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin: 8px 0;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .left-panel, .right-panel {
+                flex: none;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .control-btn {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Interactive Segmentation Demo</h1>
+            <p>Click on the image to add positive (left click) or negative (right click) points for segmentation</p>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="upload-section" id="uploadSection">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Drag and drop an image here or click to browse</div>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        Choose Image
+                    </button>
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <h3>Segmentation Controls</h3>
+                        <div class="button-group">
+                            <button class="control-btn btn-finish" id="finishBtn" onclick="finishObject()" disabled>
+                                Finish Object
+                            </button>
+                            <button class="control-btn btn-undo" id="undoBtn" onclick="undoClick()" disabled>
+                                Undo Click
+                            </button>
+                            <button class="control-btn btn-reset" id="resetBtn" onclick="resetClicks()" disabled>
+                                Reset Clicks
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h3>Export</h3>
+                        <div class="button-group">
+                            <button class="control-btn btn-save" id="saveBtn" onclick="saveMask()" disabled>
+                                Save Mask
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="status" id="status">
+                        <h4>Status</h4>
+                        <p id="statusText">No image loaded</p>
+                        <p id="clickCount">Clicks: 0</p>
+                        <p id="objectCount">Objects: 0</p>
+                    </div>
+
+                    <div class="instructions">
+                        <h4>Instructions</h4>
+                        <ul>
+                            <li><strong>Left Click:</strong> Add positive point (foreground)</li>
+                            <li><strong>Right Click:</strong> Add negative point (background)</li>
+                            <li><strong>Finish Object:</strong> Complete current segmentation</li>
+                            <li><strong>Undo Click:</strong> Remove last click</li>
+                            <li><strong>Reset Clicks:</strong> Clear all clicks for current object</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="canvas-container">
+                    <canvas id="imageCanvas" width="800" height="600"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script>
+        let canvas = document.getElementById('imageCanvas');
+        let ctx = canvas.getContext('2d');
+        let currentImage = null;
+        let imageScale = 1;
+        let imageOffsetX = 0;
+        let imageOffsetY = 0;
+
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // Drag and drop handling
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            showLoading();
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            fetch('/upload_image', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    loadImage(data.image, data.width, data.height);
+                    updateStatus('Image loaded successfully');
+                    enableControls();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                alert('Error uploading image');
+            });
+        }
+
+        function loadImage(imageData, width, height) {
+            const img = new Image();
+            img.onload = function() {
+                currentImage = img;
+                
+                // Calculate scale to fit canvas
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const scaleX = canvasWidth / width;
+                const scaleY = canvasHeight / height;
+                imageScale = Math.min(scaleX, scaleY, 1); // Don't scale up
+                
+                // Center the image
+                imageOffsetX = (canvasWidth - width * imageScale) / 2;
+                imageOffsetY = (canvasHeight - height * imageScale) / 2;
+                
+                drawImage();
+            };
+            img.src = 'data:image/png;base64,' + imageData;
+        }
+
+        function drawImage() {
+            if (!currentImage) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImage, imageOffsetX, imageOffsetY, 
+                         currentImage.width * imageScale, currentImage.height * imageScale);
+        }
+
+        // Canvas click handling
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('contextmenu', handleCanvasRightClick);
+
+        function handleCanvasClick(e) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Convert to image coordinates
+            const imageX = Math.round((x - imageOffsetX) / imageScale);
+            const imageY = Math.round((y - imageOffsetY) / imageScale);
+            
+            if (imageX >= 0 && imageX < currentImage.width && 
+                imageY >= 0 && imageY < currentImage.height) {
+                addClick(imageX, imageY, true);
+            }
+        }
+
+        function handleCanvasRightClick(e) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Convert to image coordinates
+            const imageX = Math.round((x - imageOffsetX) / imageScale);
+            const imageY = Math.round((y - imageOffsetY) / imageScale);
+            
+            if (imageX >= 0 && imageX < currentImage.width && 
+                imageY >= 0 && imageY < currentImage.height) {
+                addClick(imageX, imageY, false);
+            }
+        }
+
+        function addClick(x, y, isPositive) {
+            if (!currentImage) return;
+
+            showLoading();
+
+            fetch('/add_click', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    x: x,
+                    y: y,
+                    is_positive: isPositive
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    updateImage(data.image);
+                    updateClickCount(data.clicks_count);
+                    updateStatus('Click added successfully');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                alert('Error adding click');
+            });
+        }
+
+        function finishObject() {
+            if (!currentImage) return;
+
+            showLoading();
+
+            fetch('/finish_object', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    updateImage(data.image);
+                    updateObjectCount(data.object_count);
+                    updateStatus('Object finished');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                alert('Error finishing object');
+            });
+        }
+
+        function undoClick() {
+            if (!currentImage) return;
+
+            showLoading();
+
+            fetch('/undo_click', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    updateImage(data.image);
+                    updateClickCount(data.clicks_count);
+                    updateStatus('Click undone');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                alert('Error undoing click');
+            });
+        }
+
+        function resetClicks() {
+            if (!currentImage) return;
+
+            showLoading();
+
+            fetch('/reset_clicks', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    updateImage(data.image);
+                    updateClickCount(data.clicks_count);
+                    updateStatus('Clicks reset');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                alert('Error resetting clicks');
+            });
+        }
+
+        function saveMask() {
+            if (!currentImage) return;
+
+            showLoading();
+
+            fetch('/save_mask', {
+                method: 'POST'
+            })
+            .then(response => {
+                hideLoading();
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    throw new Error('Failed to save mask');
+                }
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'mask.png';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                updateStatus('Mask saved successfully');
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                alert('Error saving mask');
+            });
+        }
+
+        function updateImage(imageData) {
+            const img = new Image();
+            img.onload = function() {
+                currentImage = img;
+                drawImage();
+            };
+            img.src = 'data:image/png;base64,' + imageData;
+        }
+
+        function updateStatus(message) {
+            document.getElementById('statusText').textContent = message;
+        }
+
+        function updateClickCount(count) {
+            document.getElementById('clickCount').textContent = `Clicks: ${count}`;
+        }
+
+        function updateObjectCount(count) {
+            document.getElementById('objectCount').textContent = `Objects: ${count}`;
+        }
+
+        function enableControls() {
+            document.getElementById('finishBtn').disabled = false;
+            document.getElementById('undoBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = false;
+            document.getElementById('saveBtn').disabled = false;
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+    </script>
+</body>
+</html> 

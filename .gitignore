@@ -21,7 +21,7 @@ pnpm-lock.yaml
 /frontend/build/
 dist/
 build/
-
+Samsung-Prism/ritm_interactive_segmentation/weights
 # Log files
 logs/
 *.log
