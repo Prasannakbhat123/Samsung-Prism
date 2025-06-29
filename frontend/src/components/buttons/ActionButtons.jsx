@@ -73,65 +73,77 @@ const ActionButtons = ({
     }
   };
 
+  // Add polling utility for JSON changes
+  const POLL_INTERVAL = 2000; // 2 seconds
+  const POLL_TIMEOUT = 30000; // 30 seconds
+
+  async function pollForJsonChanges(onNewOrChangedJson, initialFiles) {
+    let previousFiles = initialFiles || [];
+    let startTime = Date.now();
+    let polling = true;
+
+    const poll = async () => {
+      if (!polling) return;
+      try {
+        const response = await fetch('http://localhost:3000/api/files');
+        const files = await response.json();
+        // Compare with previous list
+        const newOrChanged = files.filter(f => !previousFiles.includes(f));
+        if (newOrChanged.length > 0) {
+          for (const file of newOrChanged) {
+            const jsonData = await JsonStorageService.fetchPolygonData(file + '.jpg'); // or .png if needed
+            onNewOrChangedJson(file, jsonData);
+          }
+          polling = false; // Stop polling after detecting changes
+          return;
+        }
+        previousFiles = files;
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+      if (Date.now() - startTime < POLL_TIMEOUT) {
+        setTimeout(poll, POLL_INTERVAL);
+      }
+    };
+    poll();
+  }
+
   // Add function to handle model execution and reload JSON data afterwards
   const handleRunModel = async () => {
     if (!selectedFile) return;
-    
-    // Clear any previous error messages
     setErrorMessage(null);
-    
-    // Get the correct frame number from the actual filename
     const frameNumber = getFrameNumber(selectedFile);
     const actualFileName = getActualFileName(selectedFile);
-    
-    console.log(`Running model for frame: ${frameNumber}`, { 
-      selectedFile, 
-      actualFileName,
-      extractedNumber: frameNumber 
-    });
-    
+    console.log(`Running model for frame: ${frameNumber}`, { selectedFile, actualFileName, extractedNumber: frameNumber });
     try {
       setIsProcessing(true);
-      
-      // First save current polygons to ensure they're up to date
       if (onForceSave) {
         await onForceSave();
       }
-      
-      // Check server connection first
       const isConnected = await ModelService.testConnection();
       if (!isConnected) {
         throw new Error("Cannot connect to the backend server. Please make sure it's running.");
       }
-      
-      // Call the model API instead of just exporting JSON
+      // Get initial list of JSON files before running the model
+      let initialFiles = [];
+      try {
+        const resp = await fetch('http://localhost:3000/api/files');
+        initialFiles = await resp.json();
+      } catch (e) {
+        console.warn('Could not fetch initial JSON file list:', e);
+      }
       await ModelService.runSingleFrame(frameNumber);
-      
-      // After model execution, reload the polygon data from JSON
-      console.log(`Model execution completed, reloading polygon data for frame: ${frameNumber}`);
-      
-      // Allow time for the backend to update the JSON file
-      setTimeout(async () => {
-        try {
-          // Fetch updated JSON data using the actual filename
-          const updatedData = await JsonStorageService.fetchPolygonData(actualFileName);
-          
-          if (updatedData) {
-            console.log(`Successfully loaded updated polygon data for ${actualFileName}`);
-            const loadedPolygons = JsonStorageService.convertJsonToPolygons(updatedData, selectedFile);
-            
-            // Update the polygons in the parent component
-            if (loadedPolygons && loadedPolygons.length > 0) {
-              onUpdatePolygons({
-                [selectedFile]: loadedPolygons
-              });
-              console.log(`Redrawn canvas with ${loadedPolygons.length} updated polygons`);
-            }
+      // Start polling for new/changed JSON files
+      pollForJsonChanges(async (file, jsonData) => {
+        if (jsonData) {
+          console.log('New or changed JSON:', file, jsonData);
+          const loadedPolygons = JsonStorageService.convertJsonToPolygons(jsonData, file + '.jpg');
+          if (loadedPolygons && loadedPolygons.length > 0) {
+            onUpdatePolygons({ [file + '.jpg']: loadedPolygons });
+            console.log(`Updated polygons for ${file}.jpg`);
           }
-        } catch (error) {
-          console.error('Error reloading polygon data:', error);
         }
-      }, 1500); // Wait 1.5 seconds for the backend to process
+      }, initialFiles);
     } catch (error) {
       console.error('Error running model:', error);
       setErrorMessage(error.message || "Failed to run model. Please check the console for details.");
