@@ -306,7 +306,7 @@ class JsonStorageService {
         console.error('❌ Error saving file:', err);
         
         // Show detailed error message
-        this._showNotification(`Failed to save on server: ${err.message}. Using local storage only.`, 'warning');
+        // this._showNotification(`Failed to save on server: ${err.message}. Using local storage only.`, 'warning');
         
         // Fallback to download method if API fails
         this._offerDownload(fileName, jsonString);
