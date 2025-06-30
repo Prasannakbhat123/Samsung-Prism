@@ -2,6 +2,8 @@
 
 This is a comprehensive toolkit for interactive image segmentation, annotation, and video object tracking. It combines modern deep learning models (RITM, XMem) with a user-friendly web interface and powerful Python utilities for mask/JSON conversion and dataset management.
 
+![Samsung-Prism Overview](working.png)
+
 ---
 
 ## Features
