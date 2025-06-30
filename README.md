@@ -139,6 +139,27 @@ npm run dev
 
 ---
 
+## Important Notes and Best Practices
+
+### Model Switching Delay
+When switching between RITM and XMem workflows, please allow a few seconds for the APIs to initialize. This delay occurs because the system dynamically switches between the main Express thread (used by XMem) and the Flask-based RITM API.
+
+### RITM Click Behavior
+If you place two points that correspond to the same object but are very far apart in the RITM interface, the model may interpret them as separate instances. This can be corrected manually in polygon editing mode after the initial segmentation.
+
+### Virtual Environment Setup
+The `server.js` file expects two separate Python virtual environments:
+
+- One named `env` for XMem  
+- Another named `venv` for RITM  
+
+This separation is necessary due to conflicting dependencies between the two models. The backend handles switching between these environments automatically, but you must ensure that `requirements.txt` files in both submodules are installed correctly.
+
+### Session Persistence and Export
+All masks and annotations created during a session are persisted. Users can export both the segmentation masks and the corresponding JSON polygon annotations at any time.
+
+---
+
 ## Troubleshooting & Tips
 - Ensure all dependencies (Python, Node, model weights) are installed.
 - For RITM/XMem, download the required model weights as per their READMEs.
@@ -147,7 +168,3 @@ npm run dev
 - If you encounter errors, check the console/logs for details.
 
 ---
-
-## License
-
-[MIT License](LICENSE)
