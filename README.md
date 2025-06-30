@@ -125,6 +125,13 @@ npm run dev
 - Use for propagating masks across video frames.
 - See XMem README for details.
 
+### **Frontend and Backend Setup**
+- For both the `/frontend` and `/backend` directories, make sure to install dependencies using:
+  ```bash
+  npm install --legacy-peer-deps
+  ```
+- This ensures compatibility with any conflicting or outdated peer dependencies in the project setup.
+
 ---
 
 ## Usage Guide
