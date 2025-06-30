@@ -1,6 +1,6 @@
-# Samsung-Prism: Interactive Image Segmentation & Annotation Suite
+# Samsung-Prism: Interactive Image Segmentation & Annotation
 
-Samsung-Prism is a comprehensive toolkit for interactive image segmentation, annotation, and video object tracking. It combines modern deep learning models (RITM, XMem) with a user-friendly web interface and powerful Python utilities for mask/JSON conversion and dataset management.
+This is a comprehensive toolkit for interactive image segmentation, annotation, and video object tracking. It combines modern deep learning models (RITM, XMem) with a user-friendly web interface and powerful Python utilities for mask/JSON conversion and dataset management.
 
 ---
 
