@@ -61,18 +61,6 @@ pip install -r requirements.txt
 - RITM: See `/ritm_interactive_segmentation/README.md` for model weights and extra setup
 - XMem: See `/XMem2-cpu-web/README.md` for model weights and setup
 
-### 5. Start Backend (Flask)
-```bash
-cd ritm_interactive_segmentation/web_demo
-python app.py
-```
-
-### 6. Start Frontend (React)
-```bash
-cd frontend
-npm run dev
-```
-
 ---
 
 ## How Everything Works Together
