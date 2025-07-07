@@ -25,11 +25,14 @@ from model_loader import load_model_from_config, get_model_config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../backend/src/scripts')))
 from mask_to_json import mask_to_json
 
-# Add import for local mask_to_json
-from mask_to_json import mask_to_json
 
-# Import generate_meta_json
-from generate_meta_json import generate_meta_json
+from pathlib import Path
+
+# ==== HARDCODED PATHS (centralized for future refactor) ====
+MASK_RITM_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/mask-ritm'
+JPEGIMAGES_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/JPEGImages'
+JSON_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/json'
+PROCESS_SINGLE_FRAME_SCRIPT = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/scripts/process_single_frame.py'
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -114,12 +117,12 @@ def add_click():
     
     if current_controller is None:
         return jsonify({'error': 'No image loaded', 'debug': 'current_controller is None'}), 400
-    
     try:
         data = request.get_json()
         x = data.get('x')
         y = data.get('y')
         is_positive = data.get('is_positive', True)
+        print(f"[RITM] Received click: x={x}, y={y}, is_positive={is_positive}", flush=True)
         current_controller.add_click(x, y, is_positive)
         # Get the visualization
         vis_image = current_controller.get_visualization(alpha_blend=0.5, click_radius=3)
@@ -137,11 +140,10 @@ def add_click():
                     mask_to_save = mask_to_save.astype(np.uint8)
                     mask_to_save *= 255 // mask_to_save.max() if mask_to_save.max() > 0 else 255
                 # Save under mask-ritm/<imagename>.png
-                mask_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/mask-ritm'
-                if not os.path.exists(mask_dir):
-                    os.makedirs(mask_dir)
+                if not os.path.exists(MASK_RITM_DIR):
+                    os.makedirs(MASK_RITM_DIR)
                 if current_filename:
-                    save_path = os.path.join(mask_dir, f'{current_filename}.png')
+                    save_path = os.path.join(MASK_RITM_DIR, f'{current_filename}.png')
                     cv2.imwrite(save_path, mask_to_save)
             
             return jsonify({
@@ -297,8 +299,7 @@ def load_image_by_name():
         return jsonify({'error': 'No filename provided'}), 400
 
     # Path to JPEGImages directory
-    jpeg_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/JPEGImages'
-    image_path = os.path.join(jpeg_dir, filename)
+    image_path = os.path.join(JPEGIMAGES_DIR, filename)
     if not os.path.exists(image_path):
         return jsonify({'error': f'Image not found: {image_path}'}), 404
 
@@ -339,12 +340,11 @@ def save_ritm_json():
         return jsonify({'error': 'No image loaded'}), 400
     try:
         # Path to the latest mask
-        mask_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/mask-ritm'
-        mask_path = os.path.join(mask_dir, f'{current_filename}.png')
+        mask_path = os.path.join(MASK_RITM_DIR, f'{current_filename}.png')
         if not os.path.exists(mask_path):
             return jsonify({'error': f'Mask not found for {current_filename}'}), 404
         # Output JSON directory
-        json_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/json'
+        json_dir = JSON_DIR
         # Use the updated RITM-to-JSON logic (sequential class names)
         from mask_to_json import mask_to_json as mask_to_json_fn
         mask_to_json_fn(mask_path, json_dir)
@@ -358,7 +358,7 @@ def xmem_single_frame():
     frame_number = data.get('frameNumber')
     if frame_number is None or not isinstance(frame_number, int):
         return jsonify({'error': 'frameNumber is required and must be an integer'}), 400
-    script_path = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/scripts/process_single_frame.py'
+    script_path = PROCESS_SINGLE_FRAME_SCRIPT
     try:
         process = subprocess.Popen(
             ['python3', script_path, str(frame_number)],

@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import Optional, Dict, Any
-
+from pathlib import Path
 
 class DummyModel(nn.Module):
     """
@@ -238,23 +238,15 @@ def get_model_config() -> Dict[str, Any]:
     Get model configuration for the web demo.
     Modify this function to load your specific model.
     """
+    weights_path = Path(__file__).resolve().parent.parent / 'weights' / 'hrnet18_cocolvis_itermask_3p.pth'
     config = {
         'model_type': 'pytorch',  # 'pytorch', 'onnx', or 'dummy'
-        'model_path': '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/ritm_interactive_segmentation/weights/hrnet18_cocolvis_itermask_3p.pth',  # Path to your model file
+        'model_path' : str(weights_path),
         'device': 'cpu',        # 'cpu' or 'cuda'
         'model_class': None,    # Will use the original model loading function
         'model_kwargs': {}      # Additional arguments for model constructor
     }
-    
-    # Example: Load a real PyTorch model
-    # config.update({
-    #     'model_type': 'pytorch',
-    #     'model_path': 'path/to/your/model.pth',
-    #     'model_class': YourModelClass,
-    #     'model_kwargs': {'num_classes': 1},
-    #     'device': 'cuda' if torch.cuda.is_available() else 'cpu'
-    # })
-    
+        
     return config
 
 

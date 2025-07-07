@@ -24,7 +24,8 @@ def create_mask_from_polygons(json_path, output_dir):
             image_name += '.jpg'
         
         # Construct the exact image path - now directly in JPEGImages
-        image_path = os.path.join('/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/JPEGImages', image_name)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        image_path = os.path.abspath(os.path.join(script_dir, '../JPEGImages', image_name))
             
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Could not find image file: {image_path}")
@@ -80,8 +81,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Define directories using absolute paths
-    json_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/json'
-    output_dir = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/Annotations'
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    json_dir = os.path.abspath(os.path.join(script_dir, '../json'))
+    output_dir = os.path.abspath(os.path.join(script_dir, '../Annotations'))
 
     print(f"JSON directory: {json_dir}")
     print(f"Output directory: {output_dir}")

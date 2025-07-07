@@ -5,6 +5,7 @@ import {
   handleMouseMove, 
   handleMouseUp 
 } from "./canvasEventHandlers";
+import { sendRITMClick } from "./ritmApi";
 
 const CanvasComponent = ({
   selectedFile,
@@ -91,7 +92,40 @@ const CanvasComponent = ({
   ]);
 
   // Define wrapper functions that pass the necessary references
+  const handleRITMClick = (e, isPositive) => {
+    console.log("handleRITMClick called with isPositive:", isPositive);
+    // Compute image coordinates (reuse logic from handleClick)
+    if (!canvasRef.current || !imageRef.current || !selectedFile) return;
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
+    const rect = canvas.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    // Calculate scale and pan/zoom (reuse from handleCanvasClick)
+    const scaleX = canvas.width / img.naturalWidth;
+    const scaleY = canvas.height / img.naturalHeight;
+    const scaleFit = Math.min(scaleX, scaleY);
+    const imgWidth = img.naturalWidth * scaleFit;
+    const imgHeight = img.naturalHeight * scaleFit;
+    const centerX = (canvas.width - imgWidth) / 2;
+    const centerY = (canvas.height - imgHeight) / 2;
+    x -= panOffset.x;
+    y -= panOffset.y;
+    x -= canvas.width / 2;
+    y -= canvas.height / 2;
+    x /= zoomLevel;
+    y /= zoomLevel;
+    x += canvas.width / 2;
+    y += canvas.height / 2;
+    x = (x - centerX) / imgWidth * img.naturalWidth;
+    y = (y - centerY) / imgHeight * img.naturalHeight;
+    if (x < 0 || y < 0 || x > img.naturalWidth || y > img.naturalHeight) return;
+    sendRITMClick(Math.round(x), Math.round(y), isPositive);
+  };
+
   const handleClick = (e) => {
+    console.log("Left click detected");
+    handleRITMClick(e, true);
     handleCanvasClick(
       e,
       canvasRef,
@@ -166,6 +200,12 @@ const CanvasComponent = ({
     );
   };
 
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    console.log("Right click (contextmenu) detected");
+    handleRITMClick(e, false);
+  };
+
   // Canvas mouse events object
   const canvasMouseEvents = {
     onClick: handleClick,
@@ -173,7 +213,7 @@ const CanvasComponent = ({
     onMouseUp: handleUp,
     onMouseLeave: handleUp,
     onMouseDown: e => startPan(e),
-    onContextMenu: e => e.preventDefault(), // Prevent right-click menu
+    onContextMenu: handleContextMenu,
   };
 
   return (

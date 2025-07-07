@@ -3,7 +3,10 @@ const { spawn } = require('child_process');
 const path = require('path');
 const router = express.Router();
 
-const pythonPath = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/ritm_interactive_segmentation/env/bin/python';
+
+const pythonPath = path.resolve(__dirname, '../../../ritm_interactive_segmentation/env/bin/python');
+
+
 
 // Helper to run a Python script and return JSON
 function runPythonRitm(action, payload, callback) {

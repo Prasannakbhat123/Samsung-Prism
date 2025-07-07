@@ -3,7 +3,6 @@ import Navbar from "./components/Navbar";
 import HomeSection from "./components/HomeSection";
 import PictureUploader from "./components/PictureUploader";
 import Footer from "./components/Footer";
-import Faq from "./components/Faq";
 import ViewPage from "./components/ViewPage";
 import homebg from "./assets/homebg.jpg";
 import blobMapper from "./utils/BlobMapper";
@@ -113,15 +112,7 @@ const App = () => {
               </div>
             </section>
 
-            {/* FAQ Section */}
-            <section
-              id="faq"
-              className="min-h-screen flex items-center justify-center py-20 px-6 lg:px-8"
-            >
-              <div className="w-full max-w-5xl">
-                <Faq />
-              </div>
-            </section>
+
             
             <Footer />
           </>

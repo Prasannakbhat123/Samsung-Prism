@@ -129,21 +129,20 @@ const Preview = ({
             if (polygonData) {
               console.log(`Found polygon data for ${fileName}`);
               // Convert the JSON data to application-ready polygon objects
-              const loadedPolygons = JsonStorageService.convertJsonToPolygons(polygonData, selectedFile);
-              
+              let loadedPolygons = JsonStorageService.convertJsonToPolygons(polygonData, selectedFile);
+              // Normalize fileUrl to the current selectedFile (blob URL)
+              loadedPolygons = loadedPolygons.map(p => ({ ...p, fileUrl: selectedFile }));
               // Update the polygons state with the loaded polygons
               if (loadedPolygons && loadedPolygons.length > 0) {
                 setPolygons(prev => ({
                   ...prev,
                   [selectedFile]: loadedPolygons,
                 }));
-                
                 // Notify parent about loaded polygons
                 onUpdatePolygons({
                   ...polygons,
                   [selectedFile]: loadedPolygons,
                 });
-                
                 // Set the first polygon as selected
                 setSelectedPolygon(loadedPolygons[0]);
               }

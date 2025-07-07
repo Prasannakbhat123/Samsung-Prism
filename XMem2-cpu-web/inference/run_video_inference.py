@@ -14,7 +14,7 @@ import pandas as pd
 
 def main():
     # Define paths
-    base_dir = Path('/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src')
+    base_dir = Path(__file__).resolve().parent.parent.parent / 'backend/src'
     
     # Create a temporary directory for flattened frame structure
     flat_frames_dir = base_dir / 'flat_frames'

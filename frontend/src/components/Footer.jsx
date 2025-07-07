@@ -39,87 +39,25 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="relative mt-20 py-16 backdrop-blur-sm bg-black/80 border-t border-gray-800">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-10 -left-10 w-40 h-40 bg-gradient-to-br from-gray-700/10 to-gray-600/5 rounded-full blur-2xl"></div>
-        <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-gradient-to-br from-gray-600/10 to-gray-500/5 rounded-full blur-2xl"></div>
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto px-6">
-        <div className="grid md:grid-cols-2 gap-8 items-center">
-          {/* Brand Section */}
-          <div className="text-center md:text-left">
-            <h3 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-3">
-              ImageSegmentation
-            </h3>
-            <p className="text-gray-400 text-lg leading-relaxed max-w-md">
-              A place to remove whatever you want from your pictures in a single click.
-            </p>
-            
-            {/* Features List */}
-            <div className="mt-6 flex flex-wrap gap-4 justify-center md:justify-start">
-              {['AI-Powered', 'Fast Processing', 'High Quality'].map((feature) => (
-                <span 
-                  key={feature}
-                  className="px-3 py-1 text-xs font-medium bg-gray-800/50 text-gray-300 rounded-full border border-gray-700"
-                >
-                  {feature}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Social & Copyright Section */}
-          <div className="text-center md:text-right">
-            {/* Social Links */}
-            <div className="flex justify-center md:justify-end space-x-2 mb-6">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group w-12 h-12 bg-gray-800/50 hover:bg-gray-700/70 border border-gray-700 hover:border-gray-600 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300 hover:scale-105"
-                  aria-label={social.name}
-                >
-                  {social.icon}
-                </a>
-              ))}
-            </div>
-
-            {/* Copyright */}
-            <p className="text-gray-500 text-sm">
-              &copy; {new Date().getFullYear()} ImageSegmentation. All rights reserved.
-            </p>
-            
-            {/* Additional Links */}
-            <div className="mt-4 flex justify-center md:justify-end space-x-6 text-sm">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">
-                Privacy Policy
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">
-                Terms of Service
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">
-                Contact
-              </a>
-            </div>
-          </div>
+    <footer className="relative mt-20 py-10 bg-black/90 border-t border-gray-800">
+      <div className="relative z-10 max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center">
+        {/* Brand Section */}
+        <div className="text-center md:text-left mb-4 md:mb-0">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-1">
+            Samsung Prism
+          </h3>
+          <p className="text-gray-400 text-sm max-w-xs">
+            Professional multi-view image segmentation & correction.
+          </p>
         </div>
-
-        {/* Bottom Divider */}
-        <div className="mt-12 pt-8 border-t border-gray-800">
-          <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
-            <div className="mb-4 md:mb-0">
-              Made with ❤️ for better image processing
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Service Online</span>
-              </span>
-            </div>
+        {/* Copyright & Links */}
+        <div className="text-center md:text-right">
+          <p className="text-gray-500 text-xs mb-2">
+            &copy; {new Date().getFullYear()} Samsung Prism. All rights reserved.
+          </p>
+          <div className="flex justify-center md:justify-end space-x-4 text-xs">
+            <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">Privacy Policy</a>
+            <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">Contact</a>
           </div>
         </div>
       </div>

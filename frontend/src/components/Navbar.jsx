@@ -47,7 +47,7 @@ const Navbar = () => {
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8">
-          {['home', 'try', 'faq'].map((item) => (
+          {['home', 'try'].map((item) => (
             <button 
               key={item}
               onClick={() => scrollToSection(item)} 
@@ -81,7 +81,7 @@ const Navbar = () => {
         isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
       }`}>
         <div className="px-6 py-4 space-y-2">
-          {['home', 'try', 'faq'].map((item) => (
+          {['home', 'try'].map((item) => (
             <button 
               key={item}
               onClick={() => scrollToSection(item)} 
