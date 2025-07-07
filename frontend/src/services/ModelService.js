@@ -14,7 +14,7 @@ class ModelService {
       console.log(`Calling API to run model on frame ${frameNumber} at ${API_URL}`);
       
       // Add timeout to prevent long hanging requests
-      const response = await axios.post(`${API_URL}/model/run-single-frame`, {
+      const response = await axios.post(`${API_URL}/ritm/xmem_single_frame`, {
         frameNumber
       }, {
         timeout: 30000, // 30 second timeout

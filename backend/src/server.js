@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const setRoutes = require('./routes/jsonRoutes');
 const modelRoutes = require('./routes/modelRoutes');
+const ritmRoutes = require('./routes/ritmRoutes');
 const maskWatcher = require('./utils/maskWatcher');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -74,6 +75,8 @@ setRoutes(app);
 
 // Register model routes explicitly
 app.use('/api/model', modelRoutes);
+// Register RITM routes explicitly
+app.use('/api/ritm', ritmRoutes);
 
 // Start the mask watcher
 maskWatcher.start();
