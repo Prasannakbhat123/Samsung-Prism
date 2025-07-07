@@ -134,6 +134,16 @@ pip install -r requirements.txt
 6. **For video:** Use XMem for tracking/propagation.
 7. **Use scripts** for batch conversion or dataset management.
 
+**Note:**  
+Before starting, make sure to update the hardcoded paths below (MASK_RITM_DIR, JPEGIMAGES_DIR, JSON_DIR, PROCESS_SINGLE_FRAME_SCRIPT) to match the correct locations on your system. These are currently set for the original developer's environment and may not work on your machine without modification.
+
+# ==== HARDCODED PATHS (centralized for future refactor) ====
+MASK_RITM_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/mask-ritm'
+JPEGIMAGES_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/JPEGImages'
+JSON_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/json'
+PROCESS_SINGLE_FRAME_SCRIPT = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/scripts/process_single_frame.py'
+
+
 ---
 
 ## Important Notes and Best Practices
