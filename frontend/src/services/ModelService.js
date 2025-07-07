@@ -11,10 +11,10 @@ class ModelService {
    */
   async runSingleFrame(frameNumber) {
     try {
-      console.log(`Calling API to run model on frame ${frameNumber} at ${API_URL}`);
+      console.log(`Calling API to run model on frame ${frameNumber} at http://localhost:5000/xmem_single_frame`);
       
       // Add timeout to prevent long hanging requests
-      const response = await axios.post(`${API_URL}/ritm/xmem_single_frame`, {
+      const response = await axios.post('http://localhost:5000/xmem_single_frame', {
         frameNumber
       }, {
         timeout: 30000, // 30 second timeout
@@ -27,7 +27,7 @@ class ModelService {
     } catch (error) {
       // More detailed error handling
       if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
-        console.error(`Backend server connection failed at ${API_URL}. Is the server running?`);
+        console.error(`Backend server connection failed at http://localhost:5000. Is the server running?`);
         // throw new Error(`Cannot connect to the backend server at ${API_URL}. Please make sure the server is running.`);
       }
       

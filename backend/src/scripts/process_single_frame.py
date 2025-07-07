@@ -23,7 +23,7 @@ def process_single_frame(current_frame_number):
         current_frame_number (int): The frame number to process (e.g., 1 for frame_000001)
     """
     result = {"success": False, "message": "", "error": None}
-    print(f"Processing frame {current_frame_number}, looking for frame_{current_frame_number:06d}.jpg")
+    print(f"Processing frame {current_frame_number}, looking for frame_{current_frame_number:06d}.jpg", file=sys.stderr)
     
     try:
         # Define paths first
@@ -34,10 +34,10 @@ def process_single_frame(current_frame_number):
         temp_dir = base_dir / 'temp_frames'
         temp_masks_dir = base_dir / 'temp_masks'
 
-        print(f"Using directories:")
-        print(f"  Frames dir: {frames_dir} (exists: {frames_dir.exists()})")
-        print(f"  Masks dir: {masks_dir} (exists: {masks_dir.exists()})")
-        print(f"  Output dir: {output_dir} (exists: {output_dir.exists()})")
+        print(f"Using directories:", file=sys.stderr)
+        print(f"  Frames dir: {frames_dir} (exists: {frames_dir.exists()})", file=sys.stderr)
+        print(f"  Masks dir: {masks_dir} (exists: {masks_dir.exists()})", file=sys.stderr)
+        print(f"  Output dir: {output_dir} (exists: {output_dir.exists()})", file=sys.stderr)
 
         # Clean up any existing temp directories first
         if temp_dir.exists():
@@ -55,7 +55,7 @@ def process_single_frame(current_frame_number):
         temp_dir.mkdir(exist_ok=True)
         temp_masks_dir.mkdir(exist_ok=True)
 
-        print(f"Starting to process frame {current_frame_number}")
+        print(f"Starting to process frame {current_frame_number}", file=sys.stderr)
         
         # Set up XMem configuration with correct model path
         config = {

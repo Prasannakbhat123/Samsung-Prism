@@ -10,6 +10,7 @@ import tempfile
 import json
 import sys
 import traceback
+import subprocess
 
 # Add parent directory to Python path for isegm module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -350,6 +351,41 @@ def save_ritm_json():
         return jsonify({'success': True, 'json_file': f'{current_filename}.json'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/xmem_single_frame', methods=['POST'])
+def xmem_single_frame():
+    data = request.get_json()
+    frame_number = data.get('frameNumber')
+    if frame_number is None or not isinstance(frame_number, int):
+        return jsonify({'error': 'frameNumber is required and must be an integer'}), 400
+    script_path = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/scripts/process_single_frame.py'
+    try:
+        process = subprocess.Popen(
+            ['python3', script_path, str(frame_number)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        stdout, stderr = process.communicate()
+        print('STDOUT:', stdout.decode())
+        print('STDERR:', stderr.decode())
+        if process.returncode == 0:
+            try:
+                stdout_decoded = stdout.decode()
+                # Try to parse the last non-empty line as JSON
+                lines = [line for line in stdout_decoded.strip().split('\n') if line.strip()]
+                for line in reversed(lines):
+                    try:
+                        result = json.loads(line)
+                        return jsonify(result)
+                    except Exception:
+                        continue
+                return jsonify({'error': 'Invalid JSON from XMem script', 'details': stdout_decoded}), 500
+            except Exception as e:
+                return jsonify({'error': 'Invalid JSON from XMem script', 'details': stdout.decode()}), 500
+        else:
+            return jsonify({'error': stderr.decode() or 'XMem process failed', 'stdout': stdout.decode(), 'code': process.returncode}), 500
+    except Exception as e:
+        return jsonify({'error': 'Failed to run XMem process', 'details': str(e)}), 500
 
 if __name__ == '__main__':
     print("Starting Interactive Segmentation Web Demo...")
