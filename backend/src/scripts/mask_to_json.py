@@ -133,29 +133,45 @@ def mask_to_json(mask_path, output_dir, meta_path=None):
         for color, default_class_name in colors.items():
             # Create binary mask for this color
             color_mask = cv2.inRange(mask, np.array(color), np.array(color))
-            
+
+            # Smoothing and denoising: apply morphological operations
+            kernel = np.ones((3, 3), np.uint8)
+            color_mask = cv2.morphologyEx(color_mask, cv2.MORPH_OPEN, kernel, iterations=1)
+            color_mask = cv2.morphologyEx(color_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+
             # Find contours for this color
             contours, _ = cv2.findContours(color_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
+
             if len(contours) > 0:
                 print(f"Found {len(contours)} contours for color {color}")
-                
+
                 # Process each contour as an instance
                 for contour in contours:
-                    # Simplify the contour to reduce number of points
-                    epsilon = 0.0005 * cv2.arcLength(contour, True)  # Much smaller epsilon for more points
+                    area = cv2.contourArea(contour)
+                    perimeter = cv2.arcLength(contour, True)
+                    # Minimum area/perimeter filtering
+                    if area < 50 or perimeter < 30:
+                        continue  # Skip small/noisy contours
+
+                    # Adaptive epsilon: smaller for large/complex contours
+                    if area > 1000:
+                        epsilon = 0.005 * perimeter
+                    elif area > 200:
+                        epsilon = 0.01 * perimeter
+                    else:
+                        epsilon = 0.02 * perimeter
                     approx = cv2.approxPolyDP(contour, epsilon, True)
-                    
+
                     # Convert contour points to list format
                     coordinates = approx.reshape(-1, 2).tolist()
-                    
+
                     # Only add if we have enough points to form a polygon
                     if len(coordinates) >= 3:
                         bbox = compute_bbox(coordinates)
-                        
+
                         # Find best match in meta by combined score
                         best_match = find_best_match(bbox, meta_instances, used_meta)
-                        
+
                         if best_match and best_match[2] > 0.3:  # Minimum score threshold
                             used_meta.add(best_match[0])
                             meta_inst = best_match[1]
@@ -169,11 +185,11 @@ def mask_to_json(mask_path, output_dir, meta_path=None):
                             name = 'Object'
                             class_name = default_class_name
                             print(f"  Created new instance {instanceId} (no good match found)")
-                        
+
                         # Group by class name
                         if class_name not in class_groups:
                             class_groups[class_name] = []
-                        
+
                         instance = {
                             'instanceId': instanceId,
                             'name': name,
