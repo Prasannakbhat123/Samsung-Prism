@@ -122,6 +122,7 @@ def add_click():
         x = data.get('x')
         y = data.get('y')
         is_positive = data.get('is_positive', True)
+        
         print(f"[RITM] Received click: x={x}, y={y}, is_positive={is_positive}", flush=True)
         current_controller.add_click(x, y, is_positive)
         # Get the visualization
