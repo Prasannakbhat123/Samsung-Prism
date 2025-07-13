@@ -1,5 +1,5 @@
 scipy
-numpy
+numpy==1.26.4
 Cython
 scikit-image
 opencv-python-headless
