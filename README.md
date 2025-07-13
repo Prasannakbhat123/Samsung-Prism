@@ -35,33 +35,51 @@ This is a comprehensive toolkit for interactive image segmentation, annotation, 
 
 ## Setup Instructions
 
-### 1. Clone the Repository
-```bash
-git clone <repo-url>
-cd Samsung-Prism
-```
-
-### 2. Install Node/Frontend Dependencies
+### 1. Install Node/Frontend & Backend Dependencies
+Run the following in BOTH the `frontend` and `backend` directories:
 ```bash
 cd frontend
-npm install
+npm install --legacy-peer-deps
+cd ../backend
+npm install --legacy-peer-deps
 cd ..
 ```
 
-### 3. Install Python Dependencies
-- Use Python 3.8+
-- Recommended: Create a virtual environment
+### 2. Set Up Python Environments
 
+#### a. XMem (root venv)
+- In the project root, create a virtual environment for XMem:
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
-# (requirements.txt should include opencv-python, numpy, flask, etc.)
+pip install -r XMem2-cpu-web/requirements.txt
 ```
 
-### 4. Install RITM & XMem Dependencies
-- RITM: See `/ritm_interactive_segmentation/README.md` for model weights and extra setup
-- XMem: See `/XMem2-cpu-web/README.md` for model weights and setup
+#### b. RITM (ritm_interactive_segmentation/env)
+- In `ritm_interactive_segmentation`, create a separate virtual environment for RITM (required for numpy 1.x compatibility):
+```bash
+cd ritm_interactive_segmentation
+python -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+# (Make sure numpy==1.x is installed)
+cd ..
+```
+
+### 3. Download Model Weights
+- Download the model weights from the following Google Drive link (placeholder):
+  **[Download Weights & Saves (Google Drive)](https://drive.google.com/drive/folders/1UDfkl1ZAH_wpMlgMg6tJaDaHJMDPRgVl?usp=drive_link)**
+- After downloading, place the folders as follows:
+  - Place the `saves` folder inside `XMem2-cpu-web/`
+  - Place the `weights` folder inside `ritm_interactive_segmentation/`
+
+### 4. Start the Application
+- In the project root, run:
+```bash
+npm run start
+```
+
+This will start all necessary servers and the web UI.
 
 ---
 
