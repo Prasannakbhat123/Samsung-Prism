@@ -1,23 +1,15 @@
 {
-  "name": "prism-image-segmenter",
-  "version": "1.0.0",
-  "description": "Image Segmentation Application with React frontend and Express backend",
-  "main": "index.js",
+  "name": "prism-segmenter",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Interactive image and video segmentation with RITM and XMem",
   "scripts": {
-    "start": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd backend && npm run dev",
-    "client": "cd frontend && npm run dev",
-    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "build": "cd frontend && npm run build"
+    "setup": "bash scripts/setup.sh",
+    "start": ".venv/bin/python -m server",
+    "dev": "concurrently -k -n api,web \".venv/bin/python -m server\" \"npm --prefix web run dev\"",
+    "build": "npm --prefix web run build"
   },
-  "keywords": [
-    "react",
-    "express",
-    "image-segmentation"
-  ],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
+  "devDependencies": {
     "concurrently": "^8.2.2"
   }
 }
