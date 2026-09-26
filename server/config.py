@@ -18,7 +18,7 @@ XMEM_WEIGHTS = Path(os.environ.get('PRISM_XMEM_WEIGHTS', XMEM_ROOT / 'saves' / '
 FRONTEND_DIST = REPO_ROOT / 'frontend' / 'dist'
 
 HOST = os.environ.get('PRISM_HOST', '127.0.0.1')
-PORT = int(os.environ.get('PRISM_PORT', '5000'))
+PORT = int(os.environ.get('PRISM_PORT', '8000'))
 
 # RITM (isegm, interactive_demo) and XMem (model, inference, util, dataset)
 # are plain source trees rather than installed packages.

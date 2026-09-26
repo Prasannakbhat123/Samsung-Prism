@@ -43,3 +43,8 @@ yarn-error.log*
 *.tmp
 *.temp
 .cache/
+
+# Local projects and Python env
+/data/
+.venv/
+__pycache__/

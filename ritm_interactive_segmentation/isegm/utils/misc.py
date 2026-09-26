@@ -1,7 +1,10 @@
+import logging
+
 import torch
 import numpy as np
 
-from .log import logger
+# Same logger as isegm.utils.log, without importing tensorboard (training only).
+logger = logging.getLogger('root')
 
 
 def get_dims_with_exclusion(dim, exclude=None):
