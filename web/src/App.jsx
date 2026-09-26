@@ -111,6 +111,15 @@ export default function App() {
     if (window.location.hash !== hash) window.history.replaceState(null, '', hash)
   }, [projectName, index])
 
+  useEffect(() => {
+    const onHash = () => {
+      const { project: p, frame: f } = readHash()
+      if (p) { setProjectName(p); setIndex(f) }
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   useEffect(() => { localStorage.setItem('prism.class', activeClass) }, [activeClass])
 
   const markAnnotated = useCallback((name, annotated) => {

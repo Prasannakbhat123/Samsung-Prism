@@ -11,9 +11,9 @@ function ClassPicker({ value, onChange, className = '' }) {
         if (v === '__custom') v = window.prompt('Class name')?.trim()
         if (v) onChange(v)
       }}
-      className={`input h-7 pr-6 pl-1.5 text-xs ${className}`}
+      className={`input h-7 px-1.5 text-xs ${className}`}
     >
-      {options.map((c) => <option key={c} value={c}>class {c}</option>)}
+      {options.map((c) => <option key={c} value={c}>{c}</option>)}
       <option value="__custom">custom…</option>
     </select>
   )
@@ -29,9 +29,9 @@ export default function ObjectPanel({
       <div className="flex items-center justify-between px-3 pb-2 pt-3">
         <span className="panel-title">Objects · {objects.length}</span>
         <label className="flex items-center gap-1.5 text-xs text-zinc-500">
-          new as
+          new class
           <span className="h-2.5 w-2.5 rounded-sm" style={{ background: classColor(activeClass) }} />
-          <ClassPicker value={activeClass} onChange={onActiveClass} />
+          <ClassPicker value={activeClass} onChange={onActiveClass} className="w-16" />
         </label>
       </div>
 
@@ -63,13 +63,12 @@ export default function ObjectPanel({
                   onClick={(e) => e.stopPropagation()}
                   className="w-full truncate rounded bg-transparent px-1 text-sm text-zinc-100 outline-none focus:bg-zinc-800"
                 />
-                <div className="flex items-center gap-1 px-1 text-[11px] text-zinc-500">
-                  <span className="font-mono">{obj.id}</span>
-                  {obj.polygons.length > 1 && <span>· {obj.polygons.length} parts</span>}
+                <div className="truncate px-1 text-[11px] text-zinc-500" title={obj.id}>
+                  class {obj.className}{obj.polygons.length > 1 && ` · ${obj.polygons.length} parts`}
                 </div>
               </div>
               <div onClick={(e) => e.stopPropagation()}>
-                <ClassPicker value={obj.className} onChange={(c) => onUpdate(obj.id, { className: c })} className="w-[5.5rem]" />
+                <ClassPicker value={obj.className} onChange={(c) => onUpdate(obj.id, { className: c })} className="w-16" />
               </div>
               <button className="text-zinc-500 hover:text-zinc-200" title="Hide (H)"
                 onClick={(e) => { e.stopPropagation(); onToggleHidden(obj.id) }}>
