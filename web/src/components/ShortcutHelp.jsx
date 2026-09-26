@@ -19,6 +19,7 @@ const GROUPS = [
     ['→ / D', 'Next frame'],
     ['Home / End', 'First / last frame'],
     ['T', 'Track objects forward (XMem)'],
+    ['K / ⇧-click thumbnail', 'Choose as reference frame'],
   ]],
   ['Objects', [
     ['Tab / ⇧Tab', 'Cycle selection'],

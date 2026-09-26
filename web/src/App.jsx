@@ -56,6 +56,7 @@ export default function App() {
   const [ritm, setRitm] = useState(EMPTY_RITM)
   const [ritmBusy, setRitmBusy] = useState(false)
   const [trackCount, setTrackCount] = useState(10)
+  const [refs, setRefs] = useState(() => new Set()) // chosen reference frames; empty = auto
   const [tracking, setTracking] = useState(false)
   const [fitSignal, setFitSignal] = useState(0)
   const [toast, showToast] = useToast()
@@ -123,7 +124,9 @@ export default function App() {
   useEffect(() => { localStorage.setItem('prism.class', activeClass) }, [activeClass])
 
   const markAnnotated = useCallback((name, annotated) => {
-    setProject((p) => p && ({ ...p, frames: p.frames.map((f) => f.name === name ? { ...f, annotated } : f) }))
+    // Anything saved from the editor is a hand-made keyframe.
+    setProject((p) => p && ({ ...p, frames: p.frames.map((f) => f.name === name ? { ...f, annotated, keyframe: annotated } : f) }))
+    if (!annotated) setRefs((r) => { if (!r.has(name)) return r; const n = new Set(r); n.delete(name); return n })
   }, [])
 
   const { objects, saveState, commit, undo, redo, reload, flush } = useAnnotations(projectName, frame, markAnnotated)
@@ -143,6 +146,14 @@ export default function App() {
     setRitm(EMPTY_RITM)
     api.ritmReset().catch(() => {})
   }, [projectName, frame])
+
+  useEffect(() => { setRefs(new Set()) }, [projectName])
+
+  const toggleRef = useCallback((name) => {
+    const f = frames.find((x) => x.name === name)
+    if (!f?.annotated) { showToast('Label this frame before using it as a reference'); return }
+    setRefs((r) => { const n = new Set(r); n.has(name) ? n.delete(name) : n.add(name); return n })
+  }, [frames, showToast])
 
   const openProject = (name) => {
     setShowPicker(false)
@@ -221,16 +232,22 @@ export default function App() {
     setTracking(true)
     try {
       await flush()
-      const { frames: written } = await api.propagate(projectName, frame, count)
+      const { frames: written, kept, references } = await api.propagate(
+        projectName, frame, count, refs.size ? [...refs] : undefined)
       await loadProject(projectName)
-      showToast(`Tracked ${objects.length} object${objects.length === 1 ? '' : 's'} through ${written.length} frame${written.length === 1 ? '' : 's'}`, 'success')
+      const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`
+      showToast([
+        `Tracked ${plural(written.length, 'frame')}`,
+        kept.length && `kept ${plural(kept.length, 'edited frame')}`,
+        `learned from ${plural(references.length, 'frame')}`,
+      ].filter(Boolean).join(' · '), 'success')
       goTo(index + 1)
     } catch (e) {
       showToast(e.message, 'error')
     } finally {
       setTracking(false)
     }
-  }, [objects, remaining, tracking, trackCount, flush, projectName, frame, loadProject, showToast, goTo, index])
+  }, [objects, remaining, tracking, trackCount, refs, flush, projectName, frame, loadProject, showToast, goTo, index])
 
   // ---- keyboard ---------------------------------------------------------
   useEffect(() => {
@@ -257,6 +274,7 @@ export default function App() {
       else if ((k === 'delete' || k === 'backspace') && selectedId) deleteObject(selectedId)
       else if (k === 'h' && selectedId) setHidden((h) => { const n = new Set(h); n.has(selectedId) ? n.delete(selectedId) : n.add(selectedId); return n })
       else if (k === 't') track()
+      else if (k === 'k' && frame) toggleRef(frame)
       else if (k === 'f') setFitSignal((n) => n + 1)
       else if (/^[1-8]$/.test(k)) {
         // While creating objects, digits pick the class for the next one; in Select they recolour.
@@ -271,7 +289,7 @@ export default function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [showPicker, tool, ritm, projectName, frame, index, frames.length, selectedId, objects,
-    ritmCall, undo, redo, goTo, acceptRitm, clearRitm, deleteObject, updateObject, track])
+    ritmCall, undo, redo, goTo, acceptRitm, clearRitm, deleteObject, updateObject, track, toggleRef])
 
   // ---- render -----------------------------------------------------------
   const modelsReady = status?.ritm === 'ready' && status?.xmem === 'ready'
@@ -361,11 +379,18 @@ export default function App() {
             onTrackCount={setTrackCount}
             onTrack={track}
             remaining={remaining}
+            frames={frames}
+            index={index}
+            refs={refs}
+            onClearRefs={() => setRefs(new Set())}
           />
         )}
       </div>
 
-      {frames.length > 0 && <FrameStrip project={projectName} frames={frames} index={index} onSelect={goTo} />}
+      {frames.length > 0 && (
+        <FrameStrip project={projectName} frames={frames} index={index} onSelect={goTo}
+          refs={refs} onToggleRef={toggleRef} />
+      )}
 
       {showPicker && projects && (
         <ProjectPicker

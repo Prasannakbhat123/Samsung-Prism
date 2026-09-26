@@ -39,6 +39,6 @@ export const api = {
   ritmUndo: (project, frame) => request('POST', `${frameUrl(project, frame)}/ritm/undo`),
   ritmReset: () => request('POST', '/ritm/reset'),
 
-  propagate: (project, frame, count) =>
-    request('POST', `${frameUrl(project, frame)}/propagate`, { count }),
+  propagate: (project, frame, count, references) =>
+    request('POST', `${frameUrl(project, frame)}/propagate`, { count, references }),
 }

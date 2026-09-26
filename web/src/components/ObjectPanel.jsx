@@ -23,7 +23,15 @@ export default function ObjectPanel({
   objects, selectedId, hidden, activeClass, onActiveClass,
   onSelect, onUpdate, onDelete, onToggleHidden,
   canTrack, tracking, trackCount, onTrackCount, onTrack, remaining,
+  frames, index, refs, onClearRefs,
 }) {
+  const before = frames.slice(0, index)
+  const chosen = before.filter((f) => refs.has(f.name))
+  const ignoredRefs = refs.size - chosen.length
+  const autoRefs = before.filter((f) => f.keyframe).slice(-10)
+  const keptAhead = frames.slice(index + 1, index + 1 + trackCount).filter((f) => f.keyframe).length
+  const frameList = (fs) => fs.map((f) => frames.indexOf(f) + 1).join(', ')
+
   return (
     <aside className="flex w-72 shrink-0 flex-col border-l border-neutral-800 bg-black">
       <div className="flex items-center justify-between px-3 pb-2 pt-3">
@@ -83,11 +91,46 @@ export default function ObjectPanel({
         })}
       </div>
 
-      <div className="border-t border-neutral-800 p-3">
-        <div className="panel-title mb-2 flex items-center gap-1.5"><Waypoints size={13} /> Track with XMem</div>
-        <p className="mb-2 text-xs leading-relaxed text-neutral-500">
-          Carries every object on this frame forward. Tracked frames are overwritten; fix any drift, then track again from there.
+      <div className="space-y-2.5 border-t border-neutral-800 p-3">
+        <div className="panel-title flex items-center gap-1.5"><Waypoints size={13} /> Track with XMem</div>
+        <p className="text-xs leading-relaxed text-neutral-500">
+          Carries this frame's objects forward. Frames you've edited are never overwritten.
         </p>
+
+        <div className="rounded-md border border-neutral-800 px-2.5 py-2 text-xs">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-neutral-400">Learns from</span>
+            {refs.size > 0
+              ? <button className="text-neutral-500 hover:text-neutral-200" onClick={onClearRefs}>Clear · use auto</button>
+              : <span className="text-neutral-600">auto</span>}
+          </div>
+          <div className="leading-relaxed text-neutral-300">
+            this frame
+            {refs.size > 0
+              ? chosen.length > 0 && <> + frame{chosen.length > 1 && 's'} <span className="text-blue-400">{frameList(chosen)}</span></>
+              : autoRefs.length > 0 && <> + {autoRefs.length} labelled frame{autoRefs.length > 1 && 's'} before it</>}
+          </div>
+          {ignoredRefs > 0 && (
+            <div className="mt-1 text-neutral-600">{ignoredRefs} chosen frame{ignoredRefs > 1 && 's'} after this one won't be used</div>
+          )}
+          <div className="mt-1 text-neutral-600"><span className="kbd">K</span> or ⇧-click a thumbnail to choose frames</div>
+        </div>
+
+        <div className="flex gap-1">
+          {[1, 5, 10, 25].map((n) => (
+            <button key={n} disabled={n > remaining} onClick={() => onTrackCount(n)}
+              className={`h-6 flex-1 rounded border text-xs transition-colors disabled:opacity-30 ${
+                trackCount === n ? 'border-white text-white' : 'border-neutral-800 text-neutral-400 hover:border-neutral-600'}`}>
+              {n}
+            </button>
+          ))}
+          <button disabled={!remaining} onClick={() => onTrackCount(remaining)}
+            className={`h-6 flex-1 rounded border text-xs transition-colors disabled:opacity-30 ${
+              trackCount === remaining && ![1, 5, 10, 25].includes(remaining) ? 'border-white text-white' : 'border-neutral-800 text-neutral-400 hover:border-neutral-600'}`}>
+            All
+          </button>
+        </div>
+
         <div className="flex gap-2">
           <div className="flex items-center rounded-md border border-neutral-800 bg-black">
             <input
@@ -103,6 +146,9 @@ export default function ObjectPanel({
             {!tracking && <span className="kbd ml-1 border-neutral-300 bg-neutral-200 text-neutral-600">T</span>}
           </button>
         </div>
+        {keptAhead > 0 && (
+          <div className="text-xs text-neutral-500">{keptAhead} edited frame{keptAhead > 1 && 's'} in range will be kept</div>
+        )}
       </div>
     </aside>
   )
