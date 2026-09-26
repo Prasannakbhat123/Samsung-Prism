@@ -135,7 +135,7 @@ XMem2-cpu-web/                   XMem / XMem++ model code
 
 </details>
 
-**Version 2 changes:** the original Express server, the separate RITM Flask app and the per-frame Python subprocesses are replaced by one Python server. It no longer needs two conflicting virtualenvs or hard-coded paths, and it doesn't collide with macOS AirPlay on port 5000. XMem now runs in-process with one label per object, instead of round-tripping through colour masks and bounding-box matching. It is about 10× faster per frame, and same-class objects no longer merge. The legacy `frontend/` and `backend/` directories are superseded by `web/` and `server/`.
+**Version 2 changes:** the original Express server, the separate RITM Flask app and the per-frame Python subprocesses are replaced by one Python server. It no longer needs two conflicting virtualenvs or hard-coded paths, and it doesn't collide with macOS AirPlay on port 5000. XMem now runs in-process with one label per object, instead of round-tripping through colour masks and bounding-box matching. It is about 10× faster per frame, and same-class objects no longer merge. The old `frontend/`, `backend/` and the RITM/XMem desktop GUIs have been removed.
 
 ## Team
 

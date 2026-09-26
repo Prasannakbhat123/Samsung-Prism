@@ -20,7 +20,7 @@ FRONTEND_DIST = REPO_ROOT / 'web' / 'dist'
 HOST = os.environ.get('PRISM_HOST', '127.0.0.1')
 PORT = int(os.environ.get('PRISM_PORT', '8000'))
 
-# RITM (isegm, interactive_demo) and XMem (model, inference, util, dataset)
+# RITM (isegm) and XMem (model, inference, util, dataset)
 # are plain source trees rather than installed packages.
 for root in (RITM_ROOT, XMEM_ROOT):
     if str(root) not in sys.path:
