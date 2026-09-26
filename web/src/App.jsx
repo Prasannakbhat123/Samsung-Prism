@@ -258,7 +258,11 @@ export default function App() {
       else if (k === 'h' && selectedId) setHidden((h) => { const n = new Set(h); n.has(selectedId) ? n.delete(selectedId) : n.add(selectedId); return n })
       else if (k === 't') track()
       else if (k === 'f') setFitSignal((n) => n + 1)
-      else if (/^[1-8]$/.test(k)) { if (selectedId) updateObject(selectedId, { className: k }); else setActiveClass(k) }
+      else if (/^[1-8]$/.test(k)) {
+        // While creating objects, digits pick the class for the next one; in Select they recolour.
+        if (tool === 'select' && selectedId) updateObject(selectedId, { className: k })
+        else setActiveClass(k)
+      }
       else if (k === '?' || (k === '/' && e.shiftKey)) setShowHelp((s) => !s)
       else if (k === 'tab') { e.preventDefault(); if (objects.length) { const i = objects.findIndex((o) => o.id === selectedId); setSelectedId(objects[(i + (e.shiftKey ? -1 : 1) + objects.length) % objects.length].id) } }
       else return

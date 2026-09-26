@@ -22,7 +22,7 @@ const GROUPS = [
   ]],
   ['Objects', [
     ['Tab / ⇧Tab', 'Cycle selection'],
-    ['1 – 8', 'Set class (selected, or for new objects)'],
+    ['1 – 8', 'Class for new objects (recolours selection in Select)'],
     ['H', 'Hide / show selected'],
     ['Del', 'Delete selected'],
     ['⌘ Z / ⇧⌘ Z', 'Undo / redo'],
