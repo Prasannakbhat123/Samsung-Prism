@@ -166,11 +166,12 @@ XMem2-cpu-web/                   XMem / XMem++ model code
 Samsung PRISM worklet, Department of Computer Science and Engineering.
 
 - **A S Aravinthakshan** · [@aravinthakshan](https://github.com/aravinthakshan)
-- **Prasanna** · [@Prasannakbhat123](https://github.com/Prasannakbhat123)
 - **Kavya Bansal**
+- **Prasanna** · [@Prasannakbhat123](https://github.com/Prasannakbhat123)
 - **Janak Shah**
 
-Faculty guide: **Prof. Prakash Aithal**
+- Faculty guide: **Prof. Prakash Aithal**
+- Samsung point of contact: **Shouvik Das**
 
 Project reports, the end-review deck and the original demo video are in [`Documentation/`](Documentation).
 
