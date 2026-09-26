@@ -279,16 +279,16 @@ export default function App() {
   return (
     <div className="flex h-full flex-col">
       {/* Top bar */}
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-zinc-800 bg-zinc-900 px-3">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-neutral-800 bg-black px-3">
         <div className="flex items-center gap-2 pr-2">
-          <div className="h-5 w-5 rounded bg-gradient-to-br from-indigo-400 via-fuchsia-400 to-amber-300" />
+          <div className="h-4 w-4 rounded-[3px] bg-white" />
           <span className="text-sm font-semibold tracking-tight">Prism</span>
         </div>
         <button className="btn btn-ghost max-w-[16rem]" onClick={() => setShowPicker(true)} title="Projects">
           <FolderOpen size={15} /> <span className="truncate">{projectName || 'Open project'}</span>
         </button>
         {frame && (
-          <span className="truncate font-mono text-xs text-zinc-500">
+          <span className="truncate font-mono text-xs text-neutral-500">
             {frame}{frames[index]?.source && frames[index].source !== frame ? ` · ${frames[index].source}` : ''}
           </span>
         )}
@@ -305,16 +305,16 @@ export default function App() {
 
       <div className="flex min-h-0 flex-1">
         {/* Tool rail */}
-        <nav className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-zinc-800 bg-zinc-900 py-2">
+        <nav className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-neutral-800 bg-black py-2">
           {TOOLS.map(({ id, key, icon: Icon, label }) => (
             <button key={id} onClick={() => setTool(id)} title={`${label} (${key})`}
               className={`relative flex h-9 w-9 items-center justify-center rounded-md transition-colors ${
-                tool === id ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'}`}>
+                tool === id ? 'bg-white text-black' : 'text-neutral-500 hover:bg-neutral-900 hover:text-neutral-100'}`}>
               <Icon size={18} />
               <span className="absolute bottom-0.5 right-1 font-mono text-[9px] opacity-60">{key}</span>
             </button>
           ))}
-          <div className="my-1 h-px w-6 bg-zinc-800" />
+          <div className="my-1 h-px w-6 bg-neutral-800" />
           <RailButton icon={Undo2} label="Undo (⌘Z)" onClick={undo} />
           <RailButton icon={Redo2} label="Redo (⇧⌘Z)" onClick={redo} />
           <RailButton icon={Maximize} label="Fit to screen (F)" onClick={() => setFitSignal((n) => n + 1)} />
@@ -337,7 +337,7 @@ export default function App() {
               onRitmClick={onRitmClick}
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+            <div className="flex h-full items-center justify-center text-sm text-neutral-500">
               {projectName ? 'Loading…' : 'Open or create a project to start'}
             </div>
           )}
@@ -382,7 +382,7 @@ export default function App() {
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
       {toast && (
         <div className={`pointer-events-none absolute bottom-32 left-1/2 z-40 -translate-x-1/2 rounded-md px-3 py-2 text-sm shadow-lg ${
-          toast.kind === 'error' ? 'bg-red-600 text-white' : toast.kind === 'success' ? 'bg-emerald-600 text-white' : 'bg-zinc-700 text-zinc-100'}`}>
+          toast.kind === 'error' ? 'bg-red-600 text-white' : toast.kind === 'success' ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-100 border border-neutral-700'}`}>
           {toast.text}
         </div>
       )}
@@ -393,7 +393,7 @@ export default function App() {
 function RailButton({ icon: Icon, label, onClick }) {
   return (
     <button onClick={onClick} title={label}
-      className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">
+      className="flex h-9 w-9 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-900 hover:text-neutral-100">
       <Icon size={17} />
     </button>
   )
@@ -401,20 +401,20 @@ function RailButton({ icon: Icon, label, onClick }) {
 
 function SaveIndicator({ state }) {
   if (state === 'error') return <span className="flex items-center gap-1 text-xs text-red-400"><CircleAlert size={14} /> Save failed</span>
-  if (state === 'saved') return <span className="flex items-center gap-1 text-xs text-zinc-500"><Check size={14} /> Saved</span>
-  return <span className="flex items-center gap-1 text-xs text-zinc-400"><Loader2 size={13} className="animate-spin" /> Saving</span>
+  if (state === 'saved') return <span className="flex items-center gap-1 text-xs text-neutral-500"><Check size={14} /> Saved</span>
+  return <span className="flex items-center gap-1 text-xs text-neutral-400"><Loader2 size={13} className="animate-spin" /> Saving</span>
 }
 
 function ModelStatus({ status }) {
   if (!status) return null
-  if (status.offline) return <span className="rounded bg-red-500/15 px-2 py-1 text-xs text-red-300">Server offline</span>
-  const dot = (s) => s === 'ready' ? 'bg-emerald-400' : s === 'loading' ? 'bg-amber-400 animate-pulse' : 'bg-red-500'
+  if (status.offline) return <span className="rounded bg-red-500/10 px-2 py-1 text-xs text-red-400">Server offline</span>
+  const dot = (s) => s === 'ready' ? 'bg-white' : s === 'loading' ? 'bg-neutral-500 animate-pulse' : 'bg-red-500'
   return (
-    <span className="flex items-center gap-2 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
+    <span className="flex items-center gap-2 rounded border border-neutral-800 px-2 py-1 text-xs text-neutral-400"
       title={`RITM: ${status.ritm}\nXMem: ${status.xmem}`}>
       <span className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${dot(status.ritm)}`} />RITM</span>
       <span className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${dot(status.xmem)}`} />XMem</span>
-      <span className="font-mono uppercase text-zinc-500">{status.device}</span>
+      <span className="font-mono uppercase text-neutral-500">{status.device}</span>
     </span>
   )
 }
@@ -430,8 +430,8 @@ function ToolHint({ tool, ritm, busy, selected }) {
   return (
     // Spans the canvas width so on narrow screens it wraps instead of covering the side panels.
     <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3">
-      <div className="max-w-full rounded-2xl border border-zinc-700/60 bg-zinc-900/90 px-3 py-1.5 text-center text-xs leading-5 text-zinc-400 shadow-lg backdrop-blur [&_b]:font-medium [&_b]:text-zinc-200">
-        {busy && <Loader2 size={13} className="mr-1.5 inline animate-spin align-[-2px] text-amber-300" />}
+      <div className="max-w-full rounded-2xl border border-neutral-800 bg-black/85 px-3 py-1.5 text-center text-xs leading-5 text-neutral-400 shadow-lg backdrop-blur [&_b]:font-medium [&_b]:text-neutral-200">
+        {busy && <Loader2 size={13} className="mr-1.5 inline animate-spin align-[-2px] text-blue-400" />}
         {hints[tool]}
       </div>
     </div>

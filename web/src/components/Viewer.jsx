@@ -222,7 +222,7 @@ export default function Viewer({
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden select-none bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:16px_16px]"
+      className="relative h-full w-full overflow-hidden select-none bg-black"
       style={{ cursor: cursorStyle }}
       onMouseDown={onBackgroundDown}
       onMouseMove={(e) => size && setCursor(toImage(e))}
@@ -273,21 +273,21 @@ export default function Viewer({
                 )))}
 
               {tool === 'magic' && ritm.polygons.map((p, i) => (
-                <polygon key={i} points={toPoints(p)} fill="#facc15" fillOpacity={0.3}
-                  stroke="#facc15" strokeWidth={2} strokeDasharray="6 4" vectorEffect="non-scaling-stroke" />
+                <polygon key={i} points={toPoints(p)} fill="#3b82f6" fillOpacity={0.3}
+                  stroke="#60a5fa" strokeWidth={2} strokeDasharray="6 4" vectorEffect="non-scaling-stroke" />
               ))}
               {tool === 'magic' && ritm.clicks.map((c, i) => (
-                <circle key={i} cx={c.x} cy={c.y} r={5 / s} fill={c.positive ? '#22c55e' : '#ef4444'}
+                <circle key={i} cx={c.x} cy={c.y} r={5 / s} fill={c.positive ? '#3b82f6' : '#ef4444'}
                   stroke="#fff" strokeWidth={1.5 / s} />
               ))}
 
               {draft.length > 0 && (
                 <g>
-                  <polyline points={toPoints(cursor ? [...draft, cursor] : draft)} fill="#818cf8" fillOpacity={0.15}
-                    stroke="#a5b4fc" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                  <polyline points={toPoints(cursor ? [...draft, cursor] : draft)} fill="#ffffff" fillOpacity={0.1}
+                    stroke="#ffffff" strokeWidth={2} vectorEffect="non-scaling-stroke" />
                   {draft.map(([x, y], i) => (
                     <circle key={i} cx={x} cy={y} r={(i === 0 ? 6 : 3.5) / s}
-                      fill={i === 0 ? '#4f46e5' : '#fff'} stroke="#4f46e5" strokeWidth={1.5 / s} />
+                      fill={i === 0 ? '#3b82f6' : '#fff'} stroke="#3b82f6" strokeWidth={1.5 / s} />
                   ))}
                 </g>
               )}
@@ -296,7 +296,7 @@ export default function Viewer({
         </div>
       )}
 
-      <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 font-mono text-[11px] text-zinc-400">
+      <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 font-mono text-[11px] text-neutral-400">
         {Math.round(s * 100)}%
         {cursor && size && ` · ${Math.round(cursor[0])}, ${Math.round(cursor[1])}`}
         {size && ` · ${size.w}×${size.h}`}
