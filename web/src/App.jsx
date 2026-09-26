@@ -321,7 +321,7 @@ export default function App() {
         </nav>
 
         {/* Canvas */}
-        <main className="relative min-w-0 flex-1">
+        <main className="relative min-w-0 flex-1 overflow-hidden">
           {frame ? (
             <Viewer
               imageUrl={api.imageUrl(projectName, frame)}
@@ -428,9 +428,12 @@ function ToolHint({ tool, ritm, busy, selected }) {
     select: <>Drag objects or vertices · <b>⌥-click</b> vertex to delete · double-click edge to add a vertex · <b>Space</b>-drag to pan</>,
   }
   return (
-    <div className="pointer-events-none absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-zinc-700/60 bg-zinc-900/90 px-3 py-1.5 text-xs text-zinc-400 shadow-lg backdrop-blur [&_b]:font-medium [&_b]:text-zinc-200">
-      {busy && <Loader2 size={13} className="animate-spin text-amber-300" />}
-      {hints[tool]}
+    // Spans the canvas width so on narrow screens it wraps instead of covering the side panels.
+    <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3">
+      <div className="max-w-full rounded-2xl border border-zinc-700/60 bg-zinc-900/90 px-3 py-1.5 text-center text-xs leading-5 text-zinc-400 shadow-lg backdrop-blur [&_b]:font-medium [&_b]:text-zinc-200">
+        {busy && <Loader2 size={13} className="mr-1.5 inline animate-spin align-[-2px] text-amber-300" />}
+        {hints[tool]}
+      </div>
     </div>
   )
 }
