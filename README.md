@@ -1,195 +1,159 @@
-# Samsung-Prism: Interactive Image Segmentation & Annotation
+# Prism Segmenter
 
-This is a comprehensive toolkit for interactive image segmentation, annotation, and video object tracking. It combines modern deep learning models (RITM, XMem) with a user-friendly web interface and powerful Python utilities for mask/JSON conversion and dataset management.
+A web tool for interactive multi-object segmentation of images and videos. Click an object and **RITM** segments it. Press **T** and **XMem** tracks every object through the following frames. Fix any drift with polygon tools, then export polygons and masks.
 
-![Samsung-Prism Overview](working.png)
+Built for the **Samsung PRISM** worklet *"A software tool to generate Multi-view Image Segmentation & Correction"*.
 
----
+<p align="center">
+  <img src="docs/images/tracking.gif" width="560" alt="Two chairs segmented with RITM clicks on frame 0 and tracked by XMem through 30 frames">
+</p>
+
+![Workspace with tracked objects](docs/images/tracked.png)
 
 ## Features
 
-- **Interactive Image Segmentation**: Annotate images using polygons or advanced AI models.
-- **RITM (Reviving Iterative Training with Mask guidance)**: Fast, interactive segmentation with clicks.
-- **XMem**: State-of-the-art video object segmentation and tracking.
-- **Polygon Annotation Tools**: Draw, edit, and export polygons for precise labeling.
-- **Mask ↔ JSON Conversion**: Seamlessly convert between segmentation masks and JSON polygon annotations.
-- **Meta Tools**: Generate and use metadata for advanced workflows.
-- **Multi-format Support**: RGB, grayscale, and paletted masks.
-- **Modern Web UI**: Built with React (Vite), Tailwind, and Flask backend.
+- **One-click segmentation (RITM):** click to include, right-click to exclude, Enter to accept.
+- **Video object tracking (XMem):** propagate every object on the current frame through the next *N* frames. Each object keeps its own ID, name and class.
+- **Polygon tools:** draw polygons, drag vertices or whole objects, double-click an edge to add a vertex, ⌥-click to remove one. Multi-part objects are supported.
+- **Keyboard-first:** frames, tools, classes and tracking are all on single keys. Press `?` in the app for the full list.
+- **Autosave with undo/redo:** everything is written to disk as you work, and reloading the page returns you to the same frame.
+- **Upload anything:** drop a folder of frames, a set of images, or a video file.
+- **Export:** a zip of polygon JSON plus class-colour PNG masks per frame.
+- **Runs on NVIDIA GPUs, Apple Silicon (MPS) or CPU**, picked automatically.
 
----
+| Click to segment | Projects | Shortcuts |
+|---|---|---|
+| ![RITM click](docs/images/magic-segment.png) | ![Projects](docs/images/projects.png) | ![Shortcuts](docs/images/shortcuts.png) |
 
-## Directory Structure
+## Quick start
 
-- `/frontend` — React web app (Vite, Tailwind)
-- `/backend` — Python Flask/Express backend for annotation storage and API
-- `/ritm_interactive_segmentation` — RITM web demo, mask-to-JSON, and helper scripts
-- `/XMem2-cpu-web` — XMem video object segmentation/tracking
-- `/src/scripts` — Python utilities for mask/JSON conversion, meta, etc.
-- `/src/JPEGImages` — Input images
-- `/src/mask-ritm` — RITM-generated masks
-- `/src/json` — Output JSON annotations
-- `/src/Annotations` — Additional mask storage
+Requirements: Python 3.10–3.12 (or [uv](https://docs.astral.sh/uv/)), Node 18+, and about 300 MB for model weights.
 
----
-
-## Setup Instructions
-
-### 1. Install Node/Frontend & Backend Dependencies
-Run the following in BOTH the `frontend` and `backend` directories:
 ```bash
-cd frontend
-npm install --legacy-peer-deps
-cd ../backend
-npm install --legacy-peer-deps
-cd ..
+git clone https://github.com/Prasannakbhat123/Samsung-Prism.git
+cd Samsung-Prism
+scripts/setup.sh              # .venv + requirements + weights + web build
+.venv/bin/python -m server    # then open http://127.0.0.1:8000
 ```
 
-### 2. Set Up Python Environments
+`setup.sh` is safe to re-run. It skips the weights you already have and verifies checksums.
 
-#### a. XMem (root venv)
-- In the project root, create a virtual environment for XMem:
+**NVIDIA GPUs:** if the default `pip install torch` doesn't match your CUDA version, install PyTorch from [pytorch.org](https://pytorch.org/get-started/locally/) into `.venv` first, then run `scripts/setup.sh`.
+
+### Developing
+
 ```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r XMem2-cpu-web/requirements.txt
+npm install     # root: installs `concurrently`
+npm run dev     # Python API on :8000 + Vite with hot reload on :5173
 ```
 
-#### b. RITM (ritm_interactive_segmentation/env)
-- In `ritm_interactive_segmentation`, create a separate virtual environment for RITM (required for numpy 1.x compatibility):
-```bash
-cd ritm_interactive_segmentation
-python -m venv env
-source env/bin/activate
-pip install -r requirements.txt
-# (Make sure numpy==1.x is installed)
-cd ..
+## How to use it
+
+1. **Create a project.** Drop a folder of frames or a video onto the Projects dialog. Frames are ordered by filename (natural sort) and renamed `frame_000000.jpg`, `frame_000001.jpg`, and so on. Original names are kept in `project.json`.
+2. **Segment the first frame.** In Magic mode (`R`), click an object. Add more clicks to refine it (right-click or ⌥-click marks background), then press **Enter**. Press `1`–`8` beforehand to choose the class of the next object.
+3. **Track.** Press **T**, or use *Track N frames* in the right panel. XMem carries every object forward and writes those frames' annotations. You land on the next frame to review.
+4. **Correct and continue.** Where tracking drifts, fix the object with RITM clicks (⇧Enter adds to the selected object) or the Select tool (`V`), then track again from that frame.
+5. **Export** from the top bar.
+
+| Key | Action | Key | Action |
+|---|---|---|---|
+| `R` `P` `V` | Magic / Polygon / Select | `←` `→` or `A` `D` | Previous / next frame |
+| Click, right-click | RITM include / exclude | `T` | Track forward with XMem |
+| `Enter` / `⇧Enter` | Accept as new / add to selected | `1`–`8` | Class for new objects |
+| `Esc` | Discard clicks / deselect | `Tab` | Cycle objects |
+| `⌘Z` / `⇧⌘Z` | Undo / redo | `Del` / `H` | Delete / hide selected |
+| Scroll / `Space`+drag | Zoom / pan | `F` | Fit to screen |
+
+## Data
+
+Projects live in `data/<project>/` (set `PRISM_DATA_DIR` to put them elsewhere):
+
+```
+data/my-video/
+├── project.json                     frame list + original filenames
+├── frames/frame_000000.jpg
+├── annotations/frame_000000.json    polygons (source of truth)
+└── masks/frame_000000.png           class-colour masks, regenerated on save
 ```
 
-### 3. Download Model Weights
-- Download the model weights from the following Google Drive link (placeholder):
-  **[Download Weights & Saves (Google Drive)](https://drive.google.com/drive/folders/1UDfkl1ZAH_wpMlgMg6tJaDaHJMDPRgVl?usp=drive_link)**
-- After downloading, place the folders as follows:
-  - Place the `saves` folder inside `XMem2-cpu-web/`
-  - Place the `weights` folder inside `ritm_interactive_segmentation/`
+Annotation files use the same schema as the original tool, so earlier exports still load:
 
-### 4. Start the Application
-- In the project root, run:
-```bash
-npm run start
+```json
+{
+  "imageName": "frame_000000.jpg",
+  "classes": [
+    { "className": "1",
+      "instances": [ { "instanceId": "Object-1", "name": "Chair", "coordinates": [[x, y], ...] } ] }
+  ]
+}
 ```
 
-This will start all necessary servers and the web UI.
+An object made of several polygons is stored as several instances that share one `instanceId`. Mask colours (BGR) are the original mapping: `1` red, `2` blue, `3` green, `4` cyan, `5` magenta, `6` yellow, `7` purple, `8` orange.
 
----
+To import data from the old `JPEGImages/` + `json/` layout:
 
-## How Everything Works Together
+```bash
+.venv/bin/python -m server import my-project path/to/JPEGImages path/to/json
+```
 
-### **User Workflow**
-1. **Load Image**: Select or upload an image from the UI.
-2. **Annotate**: Use polygon tools or RITM interactive segmentation (click-based) to segment objects.
-3. **RITM Mode**: Click to add foreground/background points. RITM generates a mask in real time.
-4. **Switch Modes**: Toggle between RITM and manual polygon annotation. When switching from RITM, the mask is auto-converted to JSON polygons.
-5. **Export**: Download/export JSON annotations or masks.
-6. **Video/Sequence**: Use XMem for video object tracking and segmentation (see XMem section).
+## Configuration
 
-### **Data Flow**
-- **Masks** are saved in `/src/mask-ritm` (RITM) or `/src/Annotations` (manual/other tools).
-- **JSON** annotations are saved in `/src/json`.
-- **Conversion**: Use provided scripts to convert between mask and JSON formats, or to generate meta files.
+| Variable | Default | |
+|---|---|---|
+| `PRISM_DEVICE` | auto | `cuda`, `cuda:1`, `mps` or `cpu`. Auto picks CUDA → MPS → CPU. |
+| `PRISM_DATA_DIR` | `./data` | Where projects are stored |
+| `PRISM_PORT` / `PRISM_HOST` | `8000` / `127.0.0.1` | Server address |
+| `PRISM_RITM_WEIGHTS` | `ritm_interactive_segmentation/weights/hrnet18_cocolvis_itermask_3p.pth` | |
+| `PRISM_XMEM_WEIGHTS` | `XMem2-cpu-web/saves/XMem.pth` | |
 
----
+## Architecture
 
-## Advanced Tools & Scripts
+```
+web/  (React + Vite + Tailwind)  ──/api──▶  server/  (Flask, one process)
+                                              ├── store.py   projects, frames, annotations, masks
+                                              ├── models.py  RITM + XMem, loaded once, kept in memory
+                                              └── app.py     HTTP API, serves web/dist
+ritm_interactive_segmentation/   RITM model code (isegm)
+XMem2-cpu-web/                   XMem / XMem++ model code
+```
 
-### **Mask to JSON**
-- Convert segmentation masks (grayscale or RGB) to polygon-based JSON annotations.
-- Supports both single-channel and multi-class color masks.
-- Color mapping (BGR):
-  - (0, 0, 255): "1" (Red)
-  - (255, 0, 0): "2" (Blue)
-  - (0, 255, 0): "3" (Green)
-  - (255, 255, 0): "4" (Cyan)
-  - (255, 0, 255): "5" (Magenta)
-  - (0, 255, 255): "6" (Yellow)
-  - (128, 0, 128): "7" (Purple)
-  - (255, 165, 0): "8" (Orange)
+<details>
+<summary>HTTP API</summary>
 
-### **JSON to Mask**
-- Convert polygon JSON annotations back to color masks for training or visualization.
-- See `/src/scripts/create_masks.py` and related scripts.
+| Method | Path | |
+|---|---|---|
+| GET | `/api/status` | device and model load state |
+| GET / POST | `/api/projects` | list / create (multipart `name`, `files[]`) |
+| GET / DELETE | `/api/projects/<p>` | frames with annotated flags / delete |
+| GET | `/api/projects/<p>/export` | zip of annotations + masks |
+| GET | `/api/projects/<p>/frames/<f>/image` | frame image |
+| GET / PUT | `/api/projects/<p>/frames/<f>/annotation` | `{objects: [{id, name, className, polygons}]}` |
+| POST | `/api/projects/<p>/frames/<f>/ritm/click` | `{x, y, positive}` → `{polygons, clicks}` |
+| POST | `/api/projects/<p>/frames/<f>/ritm/undo` | undo last click |
+| POST | `/api/ritm/reset` | discard the current RITM object |
+| POST | `/api/projects/<p>/frames/<f>/propagate` | `{count}`: track with XMem |
 
-### **Meta Tools**
-- Generate `meta.json` files for advanced workflows (e.g., matching instances across frames).
-- See `/src/scripts/generate_meta_json.py`.
+</details>
 
-### **Helper Scripts**
-- `/ritm_interactive_segmentation/web_demo/mask_to_json.py`: Main mask-to-JSON logic for web demo.
-- `/src/scripts/mask_to_json_fixed.py`: Robust mask-to-JSON for batch processing.
-- `/ritm_interactive_segmentation/p2m-m2p/`: Point-to-mask and mask-to-point conversion utilities.
+**Version 2 changes:** the original Express server, the separate RITM Flask app and the per-frame Python subprocesses are replaced by one Python server. It no longer needs two conflicting virtualenvs or hard-coded paths, and it doesn't collide with macOS AirPlay on port 5000. XMem now runs in-process with one label per object, instead of round-tripping through colour masks and bounding-box matching. It is about 10× faster per frame, and same-class objects no longer merge. The legacy `frontend/` and `backend/` directories are superseded by `web/` and `server/`.
 
-### **XMem Integration**
-- `/XMem2-cpu-web/`: Video object segmentation and tracking.
-- Use for propagating masks across video frames.
-- See XMem README for details.
+## Team
 
-### **Frontend and Backend Setup**
-- For both the `/frontend` and `/backend` directories, make sure to install dependencies using:
-  ```bash
-  npm install --legacy-peer-deps
-  ```
-- This ensures compatibility with any conflicting or outdated peer dependencies in the project setup.
+Samsung PRISM worklet, Department of Computer Science and Engineering.
 
----
+- **A S Aravinthakshan** · [@aravinthakshan](https://github.com/aravinthakshan)
+- **Prasanna** · [@Prasannakbhat123](https://github.com/Prasannakbhat123)
+- **Kavya Bansal**
+- **Janak Shah**
 
-## Usage Guide
+Faculty guide: **Prof. Prakash Aithal**
 
-1. **Start all servers (backend, frontend, RITM/XMem as needed).**
-2. **Open the web UI** (usually at http://localhost:5173 or http://localhost:3000).
-3. **Load an image** and annotate using polygons or RITM.
-4. **Switch modes** as needed; RITM masks are auto-converted to JSON.
-5. **Export** your work as JSON or mask images.
-6. **For video:** Use XMem for tracking/propagation.
-7. **Use scripts** for batch conversion or dataset management.
+Project reports, the end-review deck and the original demo video are in [`Documentation/`](Documentation).
 
-**Note:**  
-Before starting, make sure to update the hardcoded paths below (MASK_RITM_DIR, JPEGIMAGES_DIR, JSON_DIR, PROCESS_SINGLE_FRAME_SCRIPT) to match the correct locations on your system. These are currently set for the original developer's environment and may not work on your machine without modification.
+## Acknowledgements
 
-# ==== HARDCODED PATHS (centralized for future refactor) ====
-MASK_RITM_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/mask-ritm'
-JPEGIMAGES_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/JPEGImages'
-JSON_DIR = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/json'
-PROCESS_SINGLE_FRAME_SCRIPT = '/home/aravinthakshan/Projects/Samsung2/Samsung-Prism/backend/src/scripts/process_single_frame.py'
-
-
----
-
-## Important Notes and Best Practices
-
-### Model Switching Delay
-When switching between RITM and XMem workflows, please allow a few seconds for the APIs to initialize. This delay occurs because the system dynamically switches between the main Express thread (used by XMem) and the Flask-based RITM API.
-
-### RITM Click Behavior
-If you place two points that correspond to the same object but are very far apart in the RITM interface, the model may interpret them as separate instances. This can be corrected manually in polygon editing mode after the initial segmentation.
-
-### Virtual Environment Setup
-The `server.js` file expects two separate Python virtual environments:
-
-- One named `env` for XMem  
-- Another named `venv` for RITM  
-
-This separation is necessary due to conflicting dependencies between the two models. The backend handles switching between these environments automatically, but you must ensure that `requirements.txt` files in both submodules are installed correctly.
-
-### Session Persistence and Export
-All masks and annotations created during a session are persisted. Users can export both the segmentation masks and the corresponding JSON polygon annotations at any time.
-
----
-
-## Troubleshooting & Tips
-- Ensure all dependencies (Python, Node, model weights) are installed.
-- For RITM/XMem, download the required model weights as per their READMEs.
-- Use only lossless PNG masks for best results.
-- For custom color mappings, update the color dictionaries in the relevant scripts.
-- If you encounter errors, check the console/logs for details.
-
----
+- **RITM:** K. Sofiiuk, I. Petrov, A. Konushin, [*Reviving Iterative Training with Mask Guidance for Interactive Segmentation*](https://arxiv.org/abs/2102.06583), 2021. Code and weights © Samsung Electronics, MIT License.
+- **XMem:** H. K. Cheng, A. G. Schwing, [*XMem: Long-Term Video Object Segmentation with an Atkinson-Shiffrin Memory Model*](https://arxiv.org/abs/2207.07115), ECCV 2022.
+- **XMem++:** M. Bekuzarov, A. Bermudez, J.-Y. Lee, H. Li, [*XMem++: Production-level Video Segmentation From Few Annotated Frames*](https://arxiv.org/abs/2307.15958), ICCV 2023. The `XMem2-cpu-web/` code is GPL-3.0.
+- The screenshots use the `chair` example clip from XMem++'s PUMaVOS dataset (CC BY 4.0).
+- The RITM checkpoint is downloaded from the [Cutie](https://github.com/hkchengrex/Cutie) release, because the original RITM release links no longer resolve.
