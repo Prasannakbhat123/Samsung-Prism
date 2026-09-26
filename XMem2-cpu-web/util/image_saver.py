@@ -334,7 +334,11 @@ class ParallelImageSaver:
                 
         else:
             while True:
-                masks_left, overlays_left = self.qsize()
+                try:
+                    masks_left, overlays_left = self.qsize()
+                except NotImplementedError:
+                    # macOS multiprocessing queues don't support qsize()
+                    break
                 if max(masks_left, overlays_left) > 0:
                     print(f"Finishing saving the results, {masks_left:>4d} masks and {overlays_left:>4d} overlays left.")
                     time.sleep(1)

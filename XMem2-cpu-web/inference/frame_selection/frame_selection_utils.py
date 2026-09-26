@@ -6,6 +6,7 @@ from torchvision.transforms import ColorJitter, Grayscale, RandomPosterize, Rand
 from tqdm import tqdm
 
 from inference.data.video_reader import Sample
+from util.device import get_device
 
 
 def extract_keys(dataloder, processor, print_progress=False, flatten=True, **kwargs):
@@ -13,7 +14,7 @@ def extract_keys(dataloder, processor, print_progress=False, flatten=True, **kwa
     shrinkages = []
     selections = []
     device = None
-    system_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    system_device = get_device()
     with torch.no_grad():  # just in case
         key_sum = None
 
@@ -26,9 +27,9 @@ def extract_keys(dataloder, processor, print_progress=False, flatten=True, **kwa
                 device = key.device
                 # to avoid possible overflow
                 key_sum = torch.zeros_like(
-                    key, device=device, dtype=torch.float64)
+                    key, device=device, dtype=torch.float32 if device.type == 'mps' else torch.float64)
 
-            key_sum += key.type(torch.float64)
+            key_sum += key.type(key_sum.dtype)
 
             if flatten:
                 key = key.flatten(start_dim=2)

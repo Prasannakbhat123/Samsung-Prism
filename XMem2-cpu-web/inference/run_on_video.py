@@ -21,6 +21,7 @@ from PIL import Image
 from inference.frame_selection.frame_selection import select_next_candidates
 from model.network import XMem
 from util.configuration import VIDEO_INFERENCE_CONFIG
+from util.device import get_device
 from util.image_saver import ParallelImageSaver, create_overlay, save_image
 from util.tensor_util import compute_array_iou
 from inference.inference_core import InferenceCore
@@ -39,7 +40,7 @@ def _inference_on_video(frames_with_masks, imgs_in_path, masks_in_path, masks_ou
                         object_color_if_single_object=(255, 255, 255), 
                         print_fps=False,
                         image_saving_max_queue_size=200):
-    device = 'cpu'
+    device = get_device()
     
     torch.autograd.set_grad_enabled(False)
     frames_with_masks = set(frames_with_masks)
@@ -73,7 +74,7 @@ def _inference_on_video(frames_with_masks, imgs_in_path, masks_in_path, masks_ou
     total_processing_time = 0.0
     with ParallelImageSaver(config['masks_out_path'], vid_name=vid_name, overlay_color_if_b_and_w=object_color_if_single_object, max_queue_size=image_saving_max_queue_size) as im_saver:
         for ti, data in enumerate(tqdm(loader, disable=not print_progress)):
-            with torch.cuda.amp.autocast(enabled=True):
+            with torch.autocast(device_type=device.type, enabled=device.type == 'cuda'):
                 data: Sample = data  # Just for Intellisense
                 # No batch dimension here, just single samples
                 sample = replace(data, rgb=data.rgb.to(device))
@@ -146,7 +147,7 @@ def _inference_on_video(frames_with_masks, imgs_in_path, masks_in_path, masks_ou
     return pd.DataFrame(stats)
 
 def _load_main_objects(imgs_in_path, masks_in_path, config):
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = get_device()
     model_path = config['model']
     network = XMem(config, model_path, pretrained_key_encoder=False, pretrained_value_encoder=False).to(device).eval()
     if model_path is not None:
@@ -199,7 +200,7 @@ def _create_dataloaders(imgs_in_path: Union[str, PathLike], masks_in_path: Union
 
 
 def _preload_permanent_memory(frames_to_put_in_permanent_memory: List[int], vid_reader: VideoReader, mapper: MaskMapper, processor: InferenceCore, augment_images_with_masks=False):
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = get_device()
     total_preloading_time = 0
     at_least_one_mask_loaded = False
     for j in frames_to_put_in_permanent_memory:
