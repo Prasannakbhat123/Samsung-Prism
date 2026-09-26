@@ -113,7 +113,7 @@ def create_app() -> Flask:
             return jsonify(error=f'Unknown endpoint: /{path}'), 404
         dist = config.FRONTEND_DIST
         if not (dist / 'index.html').exists():
-            return ('Frontend not built. Run `npm run build` in frontend/, '
+            return ('Frontend not built. Run `npm run build` in web/, '
                     'or use the Vite dev server on http://localhost:5173.'), 404
         if path and (dist / path).is_file():
             return send_from_directory(dist, path)

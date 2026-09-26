@@ -15,7 +15,7 @@ RITM_WEIGHTS = Path(os.environ.get(
     'PRISM_RITM_WEIGHTS', RITM_ROOT / 'weights' / 'hrnet18_cocolvis_itermask_3p.pth'))
 XMEM_WEIGHTS = Path(os.environ.get('PRISM_XMEM_WEIGHTS', XMEM_ROOT / 'saves' / 'XMem.pth'))
 
-FRONTEND_DIST = REPO_ROOT / 'frontend' / 'dist'
+FRONTEND_DIST = REPO_ROOT / 'web' / 'dist'
 
 HOST = os.environ.get('PRISM_HOST', '127.0.0.1')
 PORT = int(os.environ.get('PRISM_PORT', '8000'))
