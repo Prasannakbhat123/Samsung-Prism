@@ -134,14 +134,16 @@ class XMemService(_LazyModel):
         net.load_weights(weights, init_as_zero_if_needed=True)
         return net.to(self.device).eval()
 
-    MAX_REFERENCES = 10  # earlier keyframes kept in XMem's permanent memory
+    AUTO_REFERENCES = 10  # nearest earlier keyframes used when none are chosen
+    MAX_REFERENCES = 30   # cap on chosen references (each one costs memory)
 
-    def propagate(self, project: Project, start: str, count: int) -> dict:
+    def propagate(self, project: Project, start: str, count: int, references=None) -> dict:
         """Carry the objects on `start` forward through the next `count` frames.
 
-        Only frames up to the one being predicted are used: the hand-labelled
-        keyframes before `start` (nearest MAX_REFERENCES) and `start` itself go
-        into permanent memory. Keyframes inside the range are never overwritten;
+        Only frames up to the one being predicted are used. `start` plus either
+        the chosen `references` (frame names before `start`) or, by default, the
+        nearest AUTO_REFERENCES hand-labelled keyframes before it go into
+        permanent memory. Keyframes inside the range are never overwritten;
         when tracking reaches one it is used as a new reference instead.
         """
         from dataset.range_transform import im_normalization
@@ -160,7 +162,17 @@ class XMemService(_LazyModel):
         ids = [o['id'] for o in objects]
         meta = {o['id']: {k: o[k] for k in ('id', 'name', 'className')} for o in objects}
         labels = list(range(1, len(ids) + 1))
-        references = [n for n in names[:i0] if project.is_keyframe(n)][-self.MAX_REFERENCES:]
+        if references is None:
+            references = [n for n in names[:i0] if project.is_keyframe(n)][-self.AUTO_REFERENCES:]
+        else:
+            chosen = set(references)
+            unknown = chosen - set(names)
+            if unknown:
+                raise BadRequest(f'Unknown reference frames: {sorted(unknown)}')
+            # Never look ahead: only frames before the one we track from count.
+            references = [n for n in names[:i0] if n in chosen and project.read_objects(n)]
+            if len(references) > self.MAX_REFERENCES:
+                raise BadRequest(f'Choose at most {self.MAX_REFERENCES} reference frames')
 
         cfg = dict(VIDEO_INFERENCE_CONFIG)
         cfg['enable_long_term_count_usage'] = (
@@ -218,7 +230,7 @@ class XMemService(_LazyModel):
                         tracked.append({**meta[oid], 'polygons': polygons})
                 project.write_objects(name, tracked, source='xmem')
                 written.append(name)
-        return {'frames': written, 'kept': kept, 'references': len(references) + 1}
+        return {'frames': written, 'kept': kept, 'references': [*references, start]}
 
 
 ritm = RitmService()

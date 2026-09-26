@@ -104,7 +104,10 @@ def create_app() -> Flask:
     @app.post('/api/projects/<name>/frames/<frame>/propagate')
     def propagate(name, frame):
         body = request.get_json(force=True) or {}
-        return jsonify(models.xmem.propagate(project(name), frame, int(body.get('count', 1))))
+        refs = body.get('references')  # optional list of frame names; omit for auto
+        if refs is not None and not (isinstance(refs, list) and all(isinstance(r, str) for r in refs)):
+            raise BadRequest('references must be a list of frame names')
+        return jsonify(models.xmem.propagate(project(name), frame, int(body.get('count', 1)), refs))
 
     # ---- frontend -------------------------------------------------------
     @app.get('/', defaults={'path': ''})
