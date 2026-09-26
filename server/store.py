@@ -1,0 +1,299 @@
+"""On-disk project layout.
+
+    data/<project>/
+        project.json            frame list + original filenames
+        frames/frame_000000.jpg input frames, renumbered in upload order
+        annotations/frame_000000.json   polygon annotations (source of truth)
+        masks/frame_000000.png  class-colour masks, regenerated on every save
+
+Annotation files keep the original Samsung-Prism schema:
+    {"imageName": ..., "classes": [{"className": ..., "instances":
+        [{"instanceId": ..., "name": ..., "coordinates": [[x, y], ...]}]}]}
+An object split into several polygons is stored as several instances that
+share an instanceId. The API works with the grouped form instead:
+    [{"id": ..., "name": ..., "className": ..., "polygons": [[[x, y], ...]]}]
+"""
+import io
+import json
+import re
+import shutil
+import tempfile
+import zipfile
+import zlib
+from contextlib import ExitStack
+from datetime import datetime, timezone
+from pathlib import Path
+
+import cv2
+import numpy as np
+from PIL import Image, ImageOps
+
+from .config import DATA_DIR
+from .geometry import polygons_to_mask
+
+IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.bmp', '.webp', '.tif', '.tiff'}
+VIDEO_EXTS = {'.mp4', '.mov', '.avi', '.mkv', '.webm'}
+PROJECT_NAME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$')
+
+# BGR colours used by the original create_masks.py / mask_to_json.py.
+CLASS_COLORS_BGR = {
+    '1': (0, 0, 255), '2': (255, 0, 0), '3': (0, 255, 0), '4': (255, 255, 0),
+    '5': (255, 0, 255), '6': (0, 255, 255), '7': (128, 0, 128), '8': (255, 165, 0),
+}
+
+
+class NotFound(Exception):
+    pass
+
+
+class BadRequest(Exception):
+    pass
+
+
+def class_color_bgr(class_name: str):
+    if class_name in CLASS_COLORS_BGR:
+        return CLASS_COLORS_BGR[class_name]
+    rng = np.random.default_rng(zlib.crc32(class_name.encode()))
+    return tuple(int(c) for c in rng.integers(64, 256, 3))
+
+
+def _natural_key(name: str):
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', name)]
+
+
+def _now():
+    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+
+
+class Project:
+    def __init__(self, name: str):
+        if not PROJECT_NAME_RE.match(name or ''):
+            raise BadRequest(f'Invalid project name: {name!r}')
+        self.name = name
+        self.root = DATA_DIR / name
+        self.frames_dir = self.root / 'frames'
+        self.ann_dir = self.root / 'annotations'
+        self.masks_dir = self.root / 'masks'
+
+    # ---- metadata -------------------------------------------------------
+    @property
+    def meta_path(self):
+        return self.root / 'project.json'
+
+    def exists(self):
+        return self.meta_path.exists()
+
+    def meta(self) -> dict:
+        if not self.exists():
+            raise NotFound(f'Project not found: {self.name}')
+        return json.loads(self.meta_path.read_text())
+
+    def _write_meta(self, meta):
+        self.meta_path.write_text(json.dumps(meta, indent=2))
+
+    def frame_names(self) -> list:
+        return [f['name'] for f in self.meta()['frames']]
+
+    def check_frame(self, frame: str) -> str:
+        if frame not in self.frame_names():
+            raise NotFound(f'Frame not found: {frame}')
+        return frame
+
+    def summary(self) -> dict:
+        meta = self.meta()
+        annotated = {p.stem for p in self.ann_dir.glob('*.json')}
+        frames = [{
+            'name': f['name'],
+            'source': f.get('source'),
+            'annotated': Path(f['name']).stem in annotated,
+        } for f in meta['frames']]
+        return {'name': self.name, 'created': meta.get('created'), 'frames': frames}
+
+    # ---- frames ---------------------------------------------------------
+    def image_path(self, frame: str) -> Path:
+        return self.frames_dir / self.check_frame(frame)
+
+    def load_image(self, frame: str) -> np.ndarray:
+        """RGB uint8 array."""
+        img = cv2.imread(str(self.image_path(frame)), cv2.IMREAD_COLOR)
+        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    def image_size(self, frame: str):
+        with Image.open(self.image_path(frame)) as im:
+            return im.height, im.width
+
+    # ---- annotations ----------------------------------------------------
+    def _ann_path(self, frame: str) -> Path:
+        return self.ann_dir / (Path(self.check_frame(frame)).stem + '.json')
+
+    def read_objects(self, frame: str) -> list:
+        path = self._ann_path(frame)
+        if not path.exists():
+            return []
+        return file_to_objects(json.loads(path.read_text()))
+
+    def write_objects(self, frame: str, objects: list):
+        objects = validate_objects(objects)
+        path = self._ann_path(frame)
+        mask_path = self.masks_dir / (path.stem + '.png')
+        if not objects:
+            path.unlink(missing_ok=True)
+            mask_path.unlink(missing_ok=True)
+            return
+        self.ann_dir.mkdir(parents=True, exist_ok=True)
+        self.masks_dir.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(objects_to_file(frame, objects), indent=2))
+        cv2.imwrite(str(mask_path), class_color_mask(objects, self.image_size(frame)))
+
+    def label_mask(self, frame: str, objects=None):
+        """Index mask with one label per object (1..N), plus the objects in label order."""
+        objects = self.read_objects(frame) if objects is None else objects
+        mask = np.zeros(self.image_size(frame), dtype=np.uint8)
+        for label, obj in enumerate(objects, start=1):
+            polygons_to_mask(obj['polygons'], mask.shape, value=label, out=mask)
+        return mask, objects
+
+    # ---- export ---------------------------------------------------------
+    def export_zip(self) -> io.BytesIO:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for sub in ('annotations', 'masks'):
+                for p in sorted((self.root / sub).glob('*')):
+                    zf.write(p, f'{self.name}/{sub}/{p.name}')
+            zf.write(self.meta_path, f'{self.name}/project.json')
+        buf.seek(0)
+        return buf
+
+
+# ---- schema conversion ----------------------------------------------------
+def file_to_objects(data: dict) -> list:
+    objects, by_id = [], {}
+    for cls in data.get('classes', []):
+        for inst in cls.get('instances', []):
+            oid = inst.get('instanceId') or f'Object-{len(objects) + 1}'
+            if oid not in by_id:
+                by_id[oid] = {'id': oid, 'name': inst.get('name', 'Object'),
+                              'className': str(cls.get('className', '1')), 'polygons': []}
+                objects.append(by_id[oid])
+            if len(inst.get('coordinates', [])) >= 3:
+                by_id[oid]['polygons'].append(inst['coordinates'])
+    return objects
+
+
+def objects_to_file(frame: str, objects: list) -> dict:
+    classes = {}
+    for obj in objects:
+        cls = classes.setdefault(obj['className'], {'className': obj['className'], 'instances': []})
+        for poly in obj['polygons']:
+            cls['instances'].append({'instanceId': obj['id'], 'name': obj['name'], 'coordinates': poly})
+    return {'imageName': frame, 'classes': list(classes.values())}
+
+
+def validate_objects(objects) -> list:
+    if not isinstance(objects, list):
+        raise BadRequest('objects must be a list')
+    clean = []
+    for obj in objects:
+        try:
+            polygons = [[[int(round(x)), int(round(y))] for x, y in poly] for poly in obj['polygons']]
+        except (KeyError, TypeError, ValueError):
+            raise BadRequest('each object needs polygons: [[[x, y], ...], ...]')
+        polygons = [p for p in polygons if len(p) >= 3]
+        if not polygons:
+            continue
+        clean.append({'id': str(obj.get('id') or f'Object-{len(clean) + 1}'),
+                      'name': str(obj.get('name') or 'Object'),
+                      'className': str(obj.get('className') or '1'),
+                      'polygons': polygons})
+    return clean
+
+
+def class_color_mask(objects: list, shape) -> np.ndarray:
+    mask = np.zeros((*shape[:2], 3), dtype=np.uint8)
+    for obj in objects:
+        pts = [np.asarray(p, dtype=np.int32) for p in obj['polygons']]
+        cv2.fillPoly(mask, pts, class_color_bgr(obj['className']))
+    return mask
+
+
+# ---- project collection -----------------------------------------------------
+def list_projects() -> list:
+    if not DATA_DIR.exists():
+        return []
+    out = []
+    for meta_path in sorted(DATA_DIR.glob('*/project.json')):
+        meta = json.loads(meta_path.read_text())
+        ann = meta_path.parent / 'annotations'
+        out.append({'name': meta_path.parent.name, 'created': meta.get('created'),
+                    'frameCount': len(meta['frames']),
+                    'annotatedCount': len(list(ann.glob('*.json'))) if ann.exists() else 0})
+    return sorted(out, key=lambda p: p['created'] or '', reverse=True)
+
+
+def create_project(name: str, uploads: list) -> Project:
+    """uploads: [(filename, file-like)]. Images are ordered by natural filename;
+    a single video is split into frames."""
+    project = Project(name)
+    if project.root.exists():
+        raise BadRequest(f'Project already exists: {name}')
+    images = [(fn, f) for fn, f in uploads if Path(fn).suffix.lower() in IMAGE_EXTS]
+    videos = [(fn, f) for fn, f in uploads if Path(fn).suffix.lower() in VIDEO_EXTS]
+    if not images and not videos:
+        raise BadRequest('Upload image files or a video')
+
+    project.frames_dir.mkdir(parents=True)
+    try:
+        frames = []
+        if images:
+            for i, (fn, f) in enumerate(sorted(images, key=lambda t: _natural_key(t[0]))):
+                img = ImageOps.exif_transpose(Image.open(f)).convert('RGB')
+                name_i = f'frame_{i:06d}.jpg'
+                img.save(project.frames_dir / name_i, quality=95)
+                frames.append({'name': name_i, 'source': Path(fn).name})
+        else:
+            fn, f = videos[0]
+            frames = _extract_video(f, Path(fn).name, project.frames_dir)
+        project._write_meta({'name': name, 'created': _now(), 'frames': frames})
+    except Exception:
+        shutil.rmtree(project.root, ignore_errors=True)
+        raise
+    return project
+
+
+def _extract_video(stream, source: str, out_dir: Path) -> list:
+    with tempfile.NamedTemporaryFile(suffix=Path(source).suffix) as tmp:
+        shutil.copyfileobj(stream, tmp)
+        tmp.flush()
+        cap = cv2.VideoCapture(tmp.name)
+        frames = []
+        while True:
+            ok, frame = cap.read()
+            if not ok:
+                break
+            name = f'frame_{len(frames):06d}.jpg'
+            cv2.imwrite(str(out_dir / name), frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            frames.append({'name': name, 'source': f'{source}#{len(frames)}'})
+        cap.release()
+    if not frames:
+        raise BadRequest(f'Could not read any frames from {source}')
+    return frames
+
+
+def import_folder(name: str, frames_dir: Path, annotations_dir: Path = None) -> Project:
+    """Create a project from an existing JPEGImages(/json) folder on disk."""
+    files = sorted((p for p in Path(frames_dir).iterdir() if p.suffix.lower() in IMAGE_EXTS),
+                   key=lambda p: _natural_key(p.name))
+    with ExitStack() as stack:
+        project = create_project(name, [(p.name, stack.enter_context(open(p, 'rb'))) for p in files])
+    if annotations_dir:
+        for i, p in enumerate(files):
+            ann = Path(annotations_dir) / (p.stem + '.json')
+            if ann.exists():
+                project.write_objects(f'frame_{i:06d}.jpg', file_to_objects(json.loads(ann.read_text())))
+    return project
+
+
+def delete_project(name: str):
+    project = Project(name)
+    project.meta()  # raises NotFound
+    shutil.rmtree(project.root)
