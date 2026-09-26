@@ -71,13 +71,15 @@ def create_app() -> Flask:
 
     @app.get('/api/projects/<name>/frames/<frame>/annotation')
     def get_annotation(name, frame):
-        return jsonify(objects=project(name).read_objects(frame))
+        objects, source = project(name).read_annotation(frame)
+        return jsonify(objects=objects, source=source)
 
     @app.put('/api/projects/<name>/frames/<frame>/annotation')
     def put_annotation(name, frame):
         p = project(name)
-        p.write_objects(frame, (request.get_json(force=True) or {}).get('objects', []))
-        return jsonify(objects=p.read_objects(frame))
+        p.write_objects(frame, (request.get_json(force=True) or {}).get('objects', []))  # edits make a keyframe
+        objects, source = p.read_annotation(frame)
+        return jsonify(objects=objects, source=source)
 
     # ---- models ---------------------------------------------------------
     @app.post('/api/projects/<name>/frames/<frame>/ritm/click')
@@ -102,8 +104,7 @@ def create_app() -> Flask:
     @app.post('/api/projects/<name>/frames/<frame>/propagate')
     def propagate(name, frame):
         body = request.get_json(force=True) or {}
-        written = models.xmem.propagate(project(name), frame, int(body.get('count', 1)))
-        return jsonify(frames=written)
+        return jsonify(models.xmem.propagate(project(name), frame, int(body.get('count', 1))))
 
     # ---- frontend -------------------------------------------------------
     @app.get('/', defaults={'path': ''})

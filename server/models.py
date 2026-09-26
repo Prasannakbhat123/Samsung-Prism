@@ -134,9 +134,16 @@ class XMemService(_LazyModel):
         net.load_weights(weights, init_as_zero_if_needed=True)
         return net.to(self.device).eval()
 
-    def propagate(self, project: Project, start: str, count: int) -> list:
-        """Track every object on `start` through the next `count` frames,
-        overwriting their annotations. Returns the frames written."""
+    MAX_REFERENCES = 10  # earlier keyframes kept in XMem's permanent memory
+
+    def propagate(self, project: Project, start: str, count: int) -> dict:
+        """Carry the objects on `start` forward through the next `count` frames.
+
+        Only frames up to the one being predicted are used: the hand-labelled
+        keyframes before `start` (nearest MAX_REFERENCES) and `start` itself go
+        into permanent memory. Keyframes inside the range are never overwritten;
+        when tracking reaches one it is used as a new reference instead.
+        """
         from dataset.range_transform import im_normalization
         from inference.inference_core import InferenceCore
         from util.configuration import VIDEO_INFERENCE_CONFIG
@@ -145,44 +152,73 @@ class XMemService(_LazyModel):
         i0 = names.index(project.check_frame(start))
         targets = names[i0 + 1: i0 + 1 + max(0, int(count))]
         if not targets:
-            raise BadRequest('No frames after this one to propagate to')
-        label_mask, objects = project.label_mask(start)
+            raise BadRequest('No frames after this one to track to')
+        objects = project.read_objects(start)
         if not objects:
             raise BadRequest('Annotate at least one object on this frame first')
 
+        ids = [o['id'] for o in objects]
+        meta = {o['id']: {k: o[k] for k in ('id', 'name', 'className')} for o in objects}
+        labels = list(range(1, len(ids) + 1))
+        references = [n for n in names[:i0] if project.is_keyframe(n)][-self.MAX_REFERENCES:]
+
         cfg = dict(VIDEO_INFERENCE_CONFIG)
-        size = cfg['size']
         cfg['enable_long_term_count_usage'] = (
-            (len(targets) + 1) / (cfg['max_mid_term_frames'] - cfg['min_mid_term_frames'])
+            (len(targets) + len(references) + 1) / (cfg['max_mid_term_frames'] - cfg['min_mid_term_frames'])
             * cfg['num_prototypes'] >= cfg['max_long_term_elements'])
         to_tensor = transforms.Compose([
             transforms.ToTensor(), im_normalization,
-            transforms.Resize(size, interpolation=InterpolationMode.BILINEAR, antialias=True)])
-        labels = list(range(1, len(objects) + 1))
+            transforms.Resize(cfg['size'], interpolation=InterpolationMode.BILINEAR, antialias=True)])
 
+        def encode(name, frame_objects=None):
+            """(image tensor, one-hot mask of the tracked ids) for a frame, at XMem's working size."""
+            rgb = to_tensor(project.load_image(name)).to(self.device)
+            mask = project.label_mask(name, ids, frame_objects)
+            onehot = torch.from_numpy(np.stack([mask == l for l in labels])).float()
+            onehot = F.interpolate(onehot[None], rgb.shape[-2:], mode='nearest')[0].to(self.device)
+            return rgb, onehot
+
+        written, kept = [], []
         net = self.get()
         with self._run_lock, torch.no_grad():
             processor = InferenceCore(net, config=cfg)
             processor.set_all_labels(labels)
 
-            rgb = to_tensor(project.load_image(start)).to(self.device)
-            onehot = torch.from_numpy(np.stack([label_mask == l for l in labels])).float()
-            onehot = F.interpolate(onehot[None], rgb.shape[-2:], mode='nearest')[0].to(self.device)
-            processor.step(rgb, onehot, labels)
+            for name in references:
+                rgb, onehot = encode(name)
+                if onehot.any():
+                    processor.put_to_permanent_memory(rgb, onehot, ti=names.index(name))
+
+            rgb, onehot = encode(start, objects)
+            processor.put_to_permanent_memory(rgb, onehot, ti=i0)
+            processor.step(rgb, onehot, labels, do_not_add_mask_to_memory=True)
 
             for k, name in enumerate(targets):
+                end = k == len(targets) - 1
+                frame_objects, source = project.read_annotation(name)
+                if source not in (None, 'xmem'):
+                    # A person labelled this frame: keep it and learn from it.
+                    rgb, onehot = encode(name, frame_objects)
+                    processor.put_to_permanent_memory(rgb, onehot, ti=names.index(name))
+                    processor.step(rgb, onehot, labels, end=end, do_not_add_mask_to_memory=True)
+                    for o in frame_objects:
+                        if o['id'] in meta:
+                            meta[o['id']] = {k2: o[k2] for k2 in ('id', 'name', 'className')}
+                    kept.append(name)
+                    continue
+
                 image = project.load_image(name)
-                rgb = to_tensor(image).to(self.device)
-                prob = processor.step(rgb, end=(k == len(targets) - 1))
+                prob = processor.step(to_tensor(image).to(self.device), end=end)
                 prob = F.interpolate(prob[None], image.shape[:2], mode='bilinear', align_corners=False)[0]
                 out = torch.argmax(prob, dim=0).cpu().numpy()
                 tracked = []
-                for label, obj in zip(labels, objects):
+                for label, oid in zip(labels, ids):
                     polygons = mask_to_polygons(out == label)
                     if polygons:
-                        tracked.append({**obj, 'polygons': polygons})
-                project.write_objects(name, tracked)
-        return targets
+                        tracked.append({**meta[oid], 'polygons': polygons})
+                project.write_objects(name, tracked, source='xmem')
+                written.append(name)
+        return {'frames': written, 'kept': kept, 'references': len(references) + 1}
 
 
 ritm = RitmService()
